@@ -264,7 +264,7 @@ export default function PortfolioOutput({
           <div className="project-tools">
             {commandButton('less work/' + filenames[project.id], '[ less ]')}
             {commandButton('share ' + project.id, '[ share ]')}
-            {commandButton('split on', '[ split ]')}
+            {commandButton('split work/' + filenames[project.id], '[ split ]')}
           </div>
           <p className="project-stack">{project.tags.join(' / ')}</p>
           <p className="project-note">{project.note}</p>
@@ -431,12 +431,9 @@ export default function PortfolioOutput({
               ['grep -i AWS', 'Search portfolio files', 'Buscar en el portafolio'],
               ['tree', 'Browse the portfolio files', 'Explorar los archivos'],
               ['share healthcare', 'Copy a direct project link', 'Copiar enlace de un proyecto'],
-              [
-                'split on',
-                'Notes beside a runnable example',
-                'Notas junto a un ejemplo interactivo',
-              ],
+              ['split on', 'Pin a file beside the terminal', 'Fijar un archivo junto al terminal'],
               ['tab new', 'Open an independent session', 'Abrir una sesión independiente'],
+              ['tab rename Notes', 'Rename this shell', 'Renombrar esta sesión'],
               ['snake', 'Play Snake', 'Jugar Snake'],
               [language === 'en' ? 'lang es' : 'lang en', 'Switch to Spanish', 'Cambiar a inglés'],
               ['history', 'Commands from this session', 'Comandos de esta sesión'],

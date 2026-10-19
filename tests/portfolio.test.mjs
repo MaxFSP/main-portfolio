@@ -871,12 +871,16 @@ test('tab commands respect the session limit and preserve close-command history'
   assert.match(await lastOutput(page).innerText(), /Maximum 8 sessions/);
 });
 
-test('split demo performs real chunk hashing and detects intentional corruption', async (t) => {
+test('optional demo is hidden from normal split and still verifies real chunk integrity', async (t) => {
   const { page } = await openPage(t);
   await run(page, 'split on');
   const lab = page.getByRole('complementary', { name: 'Standalone chunking demo' });
+  assert.equal(await lab.count(), 0);
+  assert.ok(await page.getByRole('complementary', { name: 'Reference pane' }).isVisible());
+  await run(page, 'demo chunks');
+  await lab.waitFor();
   assert.ok(await lab.isVisible());
-  assert.match(await lastOutput(page).innerText(), /Healthcare audio uploads/);
+  assert.match(await lastOutput(page).innerText(), /Chunking lab opened/);
   await lab
     .getByRole('textbox', { name: 'Demo payload' })
     .fill('Hola, Santiago. UTF-8: á ñ 🦊 '.repeat(5));
@@ -904,14 +908,17 @@ test('mobile split panes stay within the viewport and split state belongs to its
   });
   await page.getByRole('button', { name: 'Toggle split pane' }).tap();
   const terminal = await page.locator('.terminal-scroll').boundingBox();
-  const lab = await page.locator('.lab-panel').boundingBox();
+  const lab = await page.locator('.reference-panel').boundingBox();
   assert.ok(lab.y >= terminal.y + terminal.height - 2, 'Panes stack vertically on mobile');
   await page.getByRole('button', { name: 'New terminal session' }).tap();
-  assert.equal(await page.locator('.lab-panel').count(), 0);
+  assert.equal(await page.locator('.reference-panel').count(), 0);
   await page.getByRole('tab', { name: /shell 1/ }).tap();
-  assert.equal(await page.locator('.lab-panel').count(), 1);
+  assert.equal(await page.locator('.reference-panel').count(), 1);
   await page.setViewportSize({ width: 390, height: 420 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight));
+  await page.waitForFunction(
+    () => !document.querySelector('.reference-panel .pager-controls').textContent.includes('(END)'),
+  );
   assert.ok(await page.getByRole('textbox', { name: 'Terminal command' }).isVisible());
 });
 
@@ -1037,4 +1044,112 @@ test('new reader, demo, game, and Spanish interfaces pass automated accessibilit
   await check();
   await run(page, 'crt');
   await check();
+});
+
+test('shell renaming preserves drafts, output, directory, and history with visible controls', async (t) => {
+  const { page } = await openPage(t);
+  await run(page, 'cd work');
+  await run(page, 'pwd');
+  const output = await page.locator('.transcript').innerText();
+  await page.locator('#command-input').fill('unfinished draft');
+  await page.getByRole('button', { name: 'Rename current session' }).click();
+  const name = page.getByRole('textbox', { name: 'Shell name' });
+  await name.fill('Client Work');
+  await name.press('Enter');
+  assert.ok(await page.getByRole('tab', { name: /Client Work/ }).isVisible());
+  assert.equal(await page.locator('#command-input').inputValue(), 'unfinished draft');
+  assert.equal(await page.locator('.transcript').innerText(), output);
+  assert.match(await page.locator('.command-form').innerText(), /~\/work/);
+  await page.getByRole('tab', { name: /Client Work/ }).press('F2');
+  await name.fill('   ');
+  await name.press('Enter');
+  assert.match(await page.getByRole('alert').innerText(), /1–24/);
+  await name.fill('Discard this');
+  await name.press('Escape');
+  assert.equal(await name.count(), 0);
+  assert.ok(await page.getByRole('tab', { name: /Client Work/ }).isVisible());
+  await run(page, 'history');
+  assert.match(await lastOutput(page).innerText(), /cd work\n.*pwd/);
+});
+
+test('tab rename preserves case, validates names, and double-click targets the chosen shell', async (t) => {
+  const { page } = await openPage(t);
+  await run(page, 'tab rename "Main Work"');
+  assert.ok(await page.getByRole('tab', { name: /Main Work/ }).isVisible());
+  await run(page, 'tab rename');
+  assert.match(await lastOutput(page).innerText(), /Usage: tab rename/);
+  await run(page, 'tab rename ' + 'x'.repeat(25));
+  assert.match(await lastOutput(page).innerText(), /1–24/);
+  await run(page, 'tab new second');
+  await page.getByRole('tab', { name: /Main Work/ }).dblclick();
+  const name = page.getByRole('textbox', { name: 'Shell name' });
+  await name.fill('Review');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  assert.equal(
+    await page.getByRole('tab', { name: /Review/ }).getAttribute('aria-selected'),
+    'true',
+  );
+  assert.ok(await page.getByRole('tab', { name: /second/ }).isVisible());
+  await run(page, 'tab switch 2');
+  await run(page, 'tab switch review');
+  assert.equal(
+    await page.getByRole('tab', { name: /Review/ }).getAttribute('aria-selected'),
+    'true',
+  );
+});
+
+test('split references are searchable and session-specific without replacing terminal output', async (t) => {
+  const { page } = await openPage(t);
+  await run(page, 'skills');
+  await run(page, 'split experience.txt');
+  const reference = page.getByRole('complementary', { name: 'Reference pane' });
+  assert.match(await reference.innerText(), /Experience/);
+  assert.match(await page.locator('.transcript').innerText(), /DynamoDB/);
+  assert.ok(
+    await page.locator('#command-input').evaluate((element) => element === document.activeElement),
+  );
+  await reference.getByRole('button', { name: '/ search', exact: true }).click();
+  const search = reference.getByRole('textbox', { name: 'Search this file' });
+  await search.fill('AWS');
+  await search.press('Enter');
+  assert.ok((await reference.locator('mark').count()) > 0);
+  await page.getByRole('combobox', { name: 'Reference file' }).selectOption('contact.txt');
+  assert.match(await reference.innerText(), /@/);
+  await page.getByRole('button', { name: 'New terminal session' }).click();
+  await run(page, 'split skills.txt');
+  await page.getByRole('tab', { name: /shell 1/ }).click();
+  assert.equal(
+    await page.getByRole('combobox', { name: 'Reference file' }).inputValue(),
+    'contact.txt',
+  );
+  await run(page, 'split missing.txt');
+  assert.match(await lastOutput(page).innerText(), /no such file/);
+  assert.equal(
+    await page.getByRole('combobox', { name: 'Reference file' }).inputValue(),
+    'contact.txt',
+  );
+  await reference.getByRole('button', { name: 'Close reference pane' }).click();
+  assert.equal(await reference.count(), 0);
+  await page.waitForFunction(() => document.activeElement?.id === 'command-input');
+});
+
+test('project split pins that note and Spanish rename controls fit a phone', async (t) => {
+  const { page } = await openPage(t, { viewport: { width: 390, height: 720 } });
+  await run(page, 'work pearai');
+  await page.getByRole('button', { name: '[ split ]', exact: true }).click();
+  assert.equal(
+    await page.getByRole('combobox', { name: 'Reference file' }).inputValue(),
+    'work/pearai.md',
+  );
+  await run(page, 'lang es');
+  await page.getByRole('button', { name: 'Renombrar sesión actual' }).click();
+  await page.getByRole('textbox', { name: 'Nombre de sesión' }).fill('Investigación');
+  await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze()
+    .then((result) => assert.deepEqual(result.violations, []));
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+  assert.ok(await page.getByRole('tab', { name: /Investigación/ }).isVisible());
+  assert.ok(await page.getByRole('combobox', { name: 'Archivo de referencia' }).isVisible());
 });

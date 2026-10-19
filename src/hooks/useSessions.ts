@@ -46,6 +46,8 @@ export type Session = {
   path: string;
   mode: Mode;
   split: boolean;
+  splitFile: string;
+  splitDemo: boolean;
   snake: SnakeGame;
 };
 function makeSession(id: number, entries: Entry[] = [], name?: string): Session {
@@ -64,6 +66,8 @@ function makeSession(id: number, entries: Entry[] = [], name?: string): Session 
     path: '~',
     mode: null,
     split: false,
+    splitFile: 'experience.txt',
+    splitDemo: false,
     snake: createGame(),
   };
 }
@@ -103,6 +107,8 @@ export function useSessions(initial: () => Entry[]) {
       setPath: setter('path'),
       setMode: setter('mode'),
       setSplit: setter('split'),
+      setSplitFile: setter('splitFile'),
+      setSplitDemo: setter('splitDemo'),
       setSnake: setter('snake'),
     };
   }, [activeId]);
@@ -142,6 +148,20 @@ export function useSessions(initial: () => Entry[]) {
     switchSession: setActiveId,
     createSession: create,
     closeSession: close,
+    renameSession: (id: number, name: string) => {
+      const trimmed = name.trim();
+      if (
+        !trimmed ||
+        trimmed.length > 24 ||
+        /[\x00-\x1f\x7f]/.test(trimmed) ||
+        !sessions.some((item) => item.id === id)
+      )
+        return false;
+      setSessions((items) =>
+        items.map((item) => (item.id === id ? { ...item, name: trimmed } : item)),
+      );
+      return true;
+    },
     ...setters,
   };
 }

@@ -52,11 +52,11 @@ Command manuals use inline text output and clickable examples. History expansion
 
 ## Sessions and tools
 
-The session strip lives below the combined header. Each tab owns its own scrollback, draft, working directory, history, mode, split setting, and Snake board. Theme and language are global. The app caps in-memory sessions at eight. Closing the last session is disabled.
+The session strip lives below the combined header. Each tab owns its own scrollback, draft, working directory, history, mode, split setting, and Snake board. Theme and language are global. The app caps in-memory sessions at eight. Closing the last session is disabled. Rename works through the visible control, double-click, F2, or tab rename. An inline editor supports Enter to save and Escape to cancel, and preserves shell state.
 
 The file reader replaces the terminal pane while open; search and line numbers operate on the actual localized documents. Grep uses the same document source, and result paths open the reader. Shared links restore the project and selected language.
 
-Split mode places a standalone UTF-8 chunking and SHA-256 integrity demo beside project notes. It is explicitly independent of client implementations. On smaller screens, two independently scrollable panes stack within the viewport. Snake uses the current palette, includes touch controls, and pauses across sessions and hidden browser tabs.
+Split mode pins a searchable portfolio file beside the terminal so visitors can keep a note in view while browsing other output. A compact file picker switches the reference; each shell remembers its selection. Project split buttons pin the relevant note. The optional UTF-8 chunking lab is hidden behind demo chunks and loaded on demand. On smaller screens, two independently scrollable panes stack within the viewport. Snake uses the current palette, includes touch controls, and pauses across sessions and hidden browser tabs.
 
 Text spacing is tighter: fewer blank lines between commands, smaller margins in work notes, and more compact leading. New output follows the prompt on resize while a reader who scrolls back keeps their place.
 

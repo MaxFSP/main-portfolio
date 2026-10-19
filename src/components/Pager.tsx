@@ -8,10 +8,16 @@ export default function Pager({
   document,
   language,
   onClose,
+  autoFocus = true,
+  label,
+  closeLabel,
 }: {
   document: PortfolioDocument;
   language: Language;
   onClose: () => void;
+  autoFocus?: boolean;
+  label?: string;
+  closeLabel?: string;
 }) {
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -42,9 +48,16 @@ export default function Pager({
     setMatchIndex(0);
     setSearchOpen(false);
     content.current?.scrollTo({ top: 0 });
-    content.current?.focus();
+    if (autoFocus) content.current?.focus();
     updateProgress();
-  }, [document.path, language]);
+  }, [document.path, language, autoFocus]);
+  useEffect(() => {
+    const area = content.current;
+    if (!area) return;
+    const observer = new ResizeObserver(updateProgress);
+    observer.observe(area);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     if (selected >= 0)
       content.current
@@ -88,12 +101,15 @@ export default function Pager({
   return (
     <section
       className="pager-panel"
-      aria-label={text(language, 'File reader', 'Lector de archivos')}
+      aria-label={label || text(language, 'File reader', 'Lector de archivos')}
       onKeyDown={keys}
     >
       <div className="pane-heading">
         <span>less / {document.path}</span>
-        <button onClick={onClose} aria-label={text(language, 'Close reader', 'Cerrar lector')}>
+        <button
+          onClick={onClose}
+          aria-label={closeLabel || text(language, 'Close reader', 'Cerrar lector')}
+        >
           [ q ]
         </button>
       </div>

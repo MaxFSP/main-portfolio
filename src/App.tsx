@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { profile } from './content';
 import CommandInput from './components/CommandInput';
 import PortfolioOutput from './PortfolioOutput';
 import Pager from './components/Pager';
-import ChunkLab from './components/ChunkLab';
+import ReferencePane from './components/ReferencePane';
 import Snake from './components/Snake';
 import SessionTabs from './components/SessionTabs';
 import { useSessions } from './hooks/useSessions';
@@ -19,6 +19,7 @@ import { resolveTheme, themes } from './themes';
 import type { Theme } from './themes';
 
 const resumeUrl = import.meta.env.BASE_URL + 'resume.pdf';
+const ChunkLab = lazy(() => import('./components/ChunkLab'));
 const commands = ['whoami', 'work', 'experience', 'skills', 'contact', 'help'];
 const completionOptions = [
   ...commands,
@@ -39,9 +40,11 @@ const completionOptions = [
   'snake',
   'split on',
   'split off',
+  'demo chunks',
   'tab new',
   'tab list',
   'tab close',
+  'tab rename ',
   'lang en',
   'lang es',
   'share healthcare',
@@ -109,6 +112,7 @@ function App() {
     activeId,
     createSession,
     closeSession,
+    renameSession,
     switchSession,
     setEntries,
     setInput,
@@ -122,6 +126,8 @@ function App() {
     setPath,
     setMode,
     setSplit,
+    setSplitFile,
+    setSplitDemo,
     setSnake,
   } = useSessions(initialEntries);
   const {
@@ -137,6 +143,8 @@ function App() {
     path,
     mode,
     split,
+    splitFile,
+    splitDemo,
     snake,
   } = session;
   const { projects } = getContent(language);
@@ -372,6 +380,22 @@ function App() {
     if (name === 'tab') {
       const [action, ...targetParts] = args;
       const target = targetParts.join(' ');
+      if (action === 'rename') {
+        const rawName = command.replace(/^tab\s+rename(?:\s+|$)/i, '').trim();
+        const tokens = tokenize(rawName);
+        const newName = tokens?.join(' ') || '';
+        if (!tokens || !renameSession(activeId, newName)) {
+          append(
+            command,
+            'text',
+            t(
+              'Usage: tab rename <name> (1–24 characters).',
+              'Uso: tab rename <nombre> (1–24 caracteres).',
+            ),
+          );
+        } else append(command, 'text', t('Shell renamed: ', 'Sesión renombrada: ') + newName);
+        return;
+      }
       if (!action || action === 'list') {
         append(
           command,
@@ -424,7 +448,7 @@ function App() {
         else append(command, 'text');
         return;
       }
-      append(command, 'text', 'Usage: tab [list|new <name>|switch <id>|close <id>]');
+      append(command, 'text', 'Usage: tab [list|new <name>|rename <name>|switch <id>|close <id>]');
       return;
     }
     if (name === 'less') {
@@ -506,20 +530,49 @@ function App() {
       return;
     }
     if (name === 'split') {
-      if (argument && !['on', 'off'].includes(argument)) {
-        append(command, 'text', 'Usage: split [on|off]');
-        return;
-      }
-      const enabled = argument ? argument === 'on' : !split;
-      setSplit(enabled);
-      if (enabled)
+      const file =
+        argument && !['on', 'off'].includes(argument)
+          ? resolveDocument(argument, path, language)
+          : undefined;
+      if (argument && !['on', 'off'].includes(argument) && !file) {
         append(
           command,
-          'project',
-          undefined,
-          [...entries].reverse().find((item) => item.project)?.project || 'healthcare',
+          'text',
+          t(
+            'split: no such file. Usage: split [on|off|file]',
+            'split: no existe el archivo. Uso: split [on|off|archivo]',
+          ),
         );
-      else append(command, 'text', t('Split pane closed.', 'Panel dividido cerrado.'));
+        return;
+      }
+      const enabled = file ? true : argument ? argument === 'on' : !split;
+      setSplit(enabled);
+      if (enabled) {
+        setSplitDemo(false);
+        if (file) setSplitFile(file.path);
+        append(
+          command,
+          'text',
+          t('Reference open: ', 'Referencia abierta: ') + (file?.path || splitFile),
+        );
+      } else append(command, 'text', t('Split pane closed.', 'Panel dividido cerrado.'));
+      return;
+    }
+    if (name === 'demo') {
+      if (argument !== 'chunks') {
+        append(command, 'text', 'Usage: demo chunks');
+        return;
+      }
+      setSplit(true);
+      setSplitDemo(true);
+      append(
+        command,
+        'text',
+        t(
+          'Chunking lab opened. Use split on to return to file reference.',
+          'Laboratorio abierto. Usa split on para volver a la referencia de archivos.',
+        ),
+      );
       return;
     }
     if (name === 'clear') {
@@ -882,6 +935,7 @@ function App() {
           requestAnimationFrame(() => inputRef.current?.focus());
         }}
         close={() => closeSession(activeId)}
+        rename={renameSession}
         split={split}
         toggleSplit={() => run(split ? 'split off' : 'split on')}
         language={language}
@@ -1020,7 +1074,34 @@ function App() {
             </div>
           </main>
         )}
-        {split && <ChunkLab language={language} onClose={() => setSplit(false)} />}
+        {split &&
+          (splitDemo ? (
+            <Suspense
+              fallback={
+                <aside className="lab-panel" aria-busy="true">
+                  {t('Loading lab…', 'Cargando laboratorio…')}
+                </aside>
+              }
+            >
+              <ChunkLab
+                language={language}
+                onClose={() => {
+                  setSplit(false);
+                  requestAnimationFrame(() => inputRef.current?.focus());
+                }}
+              />
+            </Suspense>
+          ) : (
+            <ReferencePane
+              file={splitFile}
+              language={language}
+              onChange={setSplitFile}
+              onClose={() => {
+                setSplit(false);
+                requestAnimationFrame(() => inputRef.current?.focus());
+              }}
+            />
+          ))}
       </div>
       <footer id="input-help" className="terminal-foot">
         <span>

@@ -114,20 +114,28 @@ export const manuals: Record<string, Manual> = {
     notes: 'If clipboard access is denied, the link remains visible and selectable.',
   },
   split: {
-    synopsis: 'split [on|off]',
+    synopsis: 'split [on|off|file]',
     description:
-      'Open project notes beside a standalone chunking demo. Split UTF-8 sample text into blocks, compute SHA-256 digests, reassemble it, and check integrity. You can deliberately corrupt a byte to test the failure path.',
-    examples: ['split on', 'split off'],
+      'Pin a portfolio file beside the terminal. Keep a project note, experience, or skills visible while running commands. Use the file picker to change the reference without changing terminal output.',
+    examples: ['split on', 'split experience.txt', 'split off'],
     notes:
-      'This is an independent browser example, not proprietary client code or a finished project recreation. It makes no network uploads. On phones, the panes stack vertically.',
+      'The reference reader supports paging and search. Each shell remembers its selected file. On phones, the panes stack vertically. The optional chunking lab is available separately through demo chunks.',
+  },
+  demo: {
+    synopsis: 'demo chunks',
+    description:
+      'Open the optional standalone chunking lab. Split UTF-8 sample text into blocks, compute SHA-256 hashes, and test integrity after reassembly.',
+    examples: ['demo chunks'],
+    notes:
+      'This is a browser example using sample text, not client code. Use split on to return to file reference or split off to close it.',
   },
   tab: {
-    synopsis: 'tab [list|new <name>|switch <id>|close <id>]',
+    synopsis: 'tab [list|new <name>|rename <name>|switch <id>|close <id>]',
     description:
       'Open and switch between up to eight independent terminal sessions. Each keeps its own history, directory, draft input, output, reader, split setting, and game. Theme and language are shared.',
-    examples: ['tab list', 'tab new notes', 'tab switch 1'],
+    examples: ['tab list', 'tab new notes', 'tab rename Research', 'tab switch 1'],
     notes:
-      'The header controls also create, switch, and close sessions. Arrow keys switch focused tabs. The last session stays open. Sessions are held in memory and reset on reload.',
+      'Rename the current shell with tab rename, the rename button, double-click, or F2 on its tab. Names keep their case and use 1–24 characters. Renaming preserves history and drafts. Arrow keys switch focused tabs. Sessions reset on reload.',
   },
   snake: {
     synopsis: 'snake',
@@ -257,15 +265,21 @@ const spanish: Record<string, Partial<Manual>> = {
   },
   split: {
     description:
-      'Abre notas junto a una demostración independiente de fragmentación: divide texto UTF-8, calcula SHA-256, lo reensambla y verifica su integridad. Puedes alterar un byte para probar el fallo.',
+      'Fija un archivo junto al terminal: notas de proyectos, experiencia o habilidades. Usa el selector para cambiar de referencia sin cambiar la salida del terminal.',
     notes:
-      'Es un ejemplo del navegador, no código de un cliente ni una recreación terminada. No realiza cargas de red. En móviles los paneles se apilan.',
+      'El lector admite búsqueda y paginación. Cada sesión recuerda su archivo. En móviles los paneles se apilan. El laboratorio opcional se abre con demo chunks.',
+  },
+  demo: {
+    description:
+      'Abre el laboratorio opcional: divide texto UTF-8, calcula SHA-256 y verifica su integridad después de reensamblarlo.',
+    notes:
+      'Usa texto de ejemplo, no código de un cliente. split on vuelve a la referencia y split off cierra el panel.',
   },
   tab: {
     description:
       'Abre hasta ocho sesiones independientes. Cada una conserva historial, directorio, borrador, salida, lector, panel dividido y juego. El tema y el idioma son compartidos.',
     notes:
-      'Los controles superiores crean, cambian y cierran sesiones. Las flechas cambian las pestañas enfocadas. La última sesión permanece abierta. Se reinician al recargar.',
+      'Renombra con tab rename, el botón de nombre, doble clic o F2 en la pestaña. Usa de 1 a 24 caracteres; se conservan mayúsculas, historial y borradores. Las sesiones se reinician al recargar.',
   },
   snake: {
     description:
