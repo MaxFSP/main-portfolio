@@ -13,7 +13,7 @@ The page is a terminal, with commands, a scrollback buffer, inline text output, 
 
 Optional light mode inverts the same interface onto white with dark text. The terminal stores its explicit theme preference separately from the previous design, so previous browser settings do not override the new black default.
 
-IBM Plex Mono is the only typeface. It is hosted locally. The entire layout uses terminal-sized type and character-based spacing.
+IBM Plex Mono is the default typeface; the optional CRT themes use VT323. Both are hosted locally. The entire layout uses terminal-sized type and character-based spacing.
 
 ## Structure
 
@@ -49,3 +49,15 @@ Black remains the default. Amber CRT uses amber phosphor on a warm black canvas;
 A native theme picker sits in the existing header. Running theme shows a plain text list of the same choices. Preferences restore before rendering, and previously saved Black or Light choices remain valid. Static scanlines and soft glow can be disabled with crt off, separately from the selected theme. The overlay ignores pointer input; it never flickers or animates. Cursor blinking still respects reduced motion.
 
 Command manuals use inline text output and clickable examples. History expansion supports !! without executing arbitrary JavaScript or server commands.
+
+## Sessions and tools
+
+The session strip lives below the combined header. Each tab owns its own scrollback, draft, working directory, history, mode, split setting, and Snake board. Theme and language are global. The app caps in-memory sessions at eight. Closing the last session is disabled.
+
+The file reader replaces the terminal pane while open; search and line numbers operate on the actual localized documents. Grep uses the same document source, and result paths open the reader. Shared links restore the project and selected language.
+
+Split mode places a standalone UTF-8 chunking and SHA-256 integrity demo beside project notes. It is explicitly independent of client implementations. On smaller screens, two independently scrollable panes stack within the viewport. Snake uses the current palette, includes touch controls, and pauses across sessions and hidden browser tabs.
+
+Text spacing is tighter: fewer blank lines between commands, smaller margins in work notes, and more compact leading. New output follows the prompt on resize while a reader who scrolls back keeps their place.
+
+CRT now has live presets and separate scanline/glow strengths. Explicit presets can affect Black without changing its palette; Light and Paper stay clean. Effects remain static and ignore pointer input. There are no flicker effects.

@@ -1,24 +1,82 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
-import { experience, profile, projects, skillGroups } from './content';
+import { profile } from './content';
 import CommandInput from './components/CommandInput';
-import ManualPage from './components/ManualPage';
+import PortfolioOutput from './PortfolioOutput';
+import Pager from './components/Pager';
+import ChunkLab from './components/ChunkLab';
+import Snake from './components/Snake';
+import SessionTabs from './components/SessionTabs';
+import { useSessions } from './hooks/useSessions';
+import type { Entry, View } from './hooks/useSessions';
+import { filenames, getDocuments, resolveDocument, tokenize } from './documents';
+import type { SearchRequest } from './documents';
+import { getContent, initialLanguage, text } from './localization';
+import type { Language } from './localization';
+import { crtPresets, readCrt } from './crt';
 import { manuals } from './manual';
 import { resolveTheme, themes } from './themes';
 import type { Theme } from './themes';
 
-type View = 'about' | 'work' | 'experience' | 'skills' | 'contact' | 'help' | 'project' | 'resume' | 'tree' | 'themes' | 'manual' | 'text';
-type Entry = { id: number; command: string; path: string; view: View; project?: string; message?: string };
 const resumeUrl = import.meta.env.BASE_URL + 'resume.pdf';
 const commands = ['whoami', 'work', 'experience', 'skills', 'contact', 'help'];
-const completionOptions = [...commands, 'about', 'ls', 'pwd', 'resume', 'theme', ...themes.map(theme => 'theme ' + theme.id), 'crt on', 'crt off', 'clear', 'tree', 'history', '!!', 'man', ...Object.keys(manuals).map(command => 'man ' + command), 'cat about.txt', 'cat experience.txt', 'cat skills.txt', 'cat contact.txt', 'cat work/healthcare-audio.md', 'cat work/real-estate.md', 'cat work/pearai.md', 'cd work', 'cd ..'];
-const filenames: Record<string, string> = { healthcare: 'healthcare-audio.md', 'real-estate': 'real-estate.md', pearai: 'pearai.md' };
-const ascii = ["   _____ ____  ______", "  / ___// __ \\/ ____/", "  \\__ \\/ /_/ / /_   ", " ___/ / ____/ __/   ", "/____/_/   /_/      "].join('\n');
+const completionOptions = [
+  ...commands,
+  'about',
+  'ls',
+  'pwd',
+  'resume',
+  'theme',
+  ...themes.map((theme) => 'theme ' + theme.id),
+  'crt on',
+  'crt off',
+  'crt soft',
+  'crt strong',
+  'clear',
+  'tree',
+  'history',
+  '!!',
+  'snake',
+  'split on',
+  'split off',
+  'tab new',
+  'tab list',
+  'tab close',
+  'lang en',
+  'lang es',
+  'share healthcare',
+  'share real-estate',
+  'share pearai',
+  'grep ',
+  'man',
+  ...Object.keys(manuals).map((command) => 'man ' + command),
+  ...[
+    'about.txt',
+    'experience.txt',
+    'skills.txt',
+    'contact.txt',
+    ...Object.values(filenames).map((file) => 'work/' + file),
+  ].flatMap((file) => ['cat ' + file, 'less ' + file]),
+  'cd work',
+  'cd ..',
+];
 const themeKey = 'portfolio-terminal-theme';
 
 function initialEntries(): Entry[] {
   const hash = window.location.hash.slice(1);
-  const routes: Record<string, View> = { about: 'about', overview: 'about', work: 'work', experience: 'experience', skills: 'skills', contact: 'contact' };
+  const project = Object.keys(filenames).find((id) => hash === 'work/' + id);
+  if (project)
+    return [
+      { id: 0, command: 'cat work/' + filenames[project], path: '~', view: 'project', project },
+    ];
+  const routes: Record<string, View> = {
+    about: 'about',
+    overview: 'about',
+    work: 'work',
+    experience: 'experience',
+    skills: 'skills',
+    contact: 'contact',
+  };
   const view = Object.hasOwn(routes, hash) ? routes[hash] : undefined;
   if (view) return [{ id: 0, command: view === 'about' ? 'whoami' : view, path: '~', view }];
   return [
@@ -28,22 +86,61 @@ function initialEntries(): Entry[] {
 }
 
 function Prompt({ path = '~' }: { path?: string }) {
-  return <span className="prompt"><span className="prompt-user">maxfsp</span><span className="prompt-host">@portfolio</span><span className="prompt-colon">:</span><span className="prompt-path">{path}</span><span className="prompt-dollar">$</span></span>;
+  return (
+    <span className="prompt">
+      <span className="prompt-user">maxfsp</span>
+      <span className="prompt-host">@portfolio</span>
+      <span className="prompt-colon">:</span>
+      <span className="prompt-path">{path}</span>
+      <span className="prompt-dollar">$</span>
+    </span>
+  );
 }
 
 function App() {
-  const [theme, setTheme] = useState<Theme>(() => resolveTheme(document.documentElement.dataset.theme || '') || 'dark');
-  const [crtEffects, setCrtEffects] = useState(() => document.documentElement.dataset.crt !== 'off');
-  const [entries, setEntries] = useState<Entry[]>(initialEntries);
-  const [input, setInput] = useState('');
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const [draft, setDraft] = useState('');
-  const [completions, setCompletions] = useState<string[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [searchDraft, setSearchDraft] = useState('');
-  const [searchIndex, setSearchIndex] = useState(0);
-  const [path, setPath] = useState('~');
+  const [theme, setTheme] = useState<Theme>(
+    () => resolveTheme(document.documentElement.dataset.theme || '') || 'dark',
+  );
+  const [language, setLanguage] = useState<Language>(initialLanguage);
+  const [crtSettings, setCrtSettings] = useState(readCrt);
+  const {
+    sessions,
+    session,
+    activeId,
+    createSession,
+    closeSession,
+    switchSession,
+    setEntries,
+    setInput,
+    setHistory,
+    setHistoryIndex,
+    setDraft,
+    setCompletions,
+    setSearching,
+    setSearchDraft,
+    setSearchIndex,
+    setPath,
+    setMode,
+    setSplit,
+    setSnake,
+  } = useSessions(initialEntries);
+  const {
+    entries,
+    input,
+    history,
+    historyIndex,
+    draft,
+    completions,
+    searching,
+    searchDraft,
+    searchIndex,
+    path,
+    mode,
+    split,
+    snake,
+  } = session;
+  const { projects } = getContent(language);
+  const t = (en: string, es: string) => text(language, en, es);
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,21 +148,119 @@ function App() {
   const nextId = useRef(2);
   const shouldScroll = useRef(false);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const matches = [...history].reverse().filter((command, index, all) => all.indexOf(command) === index && command.toLowerCase().includes(input.toLowerCase()));
+  const scrollPositions = useRef<Record<number, number>>({});
+  const scrollSizes = useRef<Record<number, { height: number; total: number }>>({});
+  const followOutput = useRef<Record<number, boolean>>({});
+  const matches = [...history]
+    .reverse()
+    .filter(
+      (command, index, all) =>
+        all.indexOf(command) === index && command.toLowerCase().includes(input.toLowerCase()),
+    );
   const searchMatch = matches[searchIndex % Math.max(matches.length, 1)];
-  const availableCompletions = path === '~/work' ? [...completionOptions, ...Object.values(filenames).map(file => 'cat ' + file)] : completionOptions;
-  const suggestion = !searching && input ? [...history].reverse().find(command => command.startsWith(input) && command !== input) || availableCompletions.find(command => command.startsWith(input) && command !== input) || '' : '';
+  const availableCompletions =
+    path === '~/work'
+      ? [
+          ...completionOptions,
+          ...Object.values(filenames).flatMap((file) => ['cat ' + file, 'less ' + file]),
+        ]
+      : completionOptions;
+  const suggestion =
+    !searching && input
+      ? [...history].reverse().find((command) => command.startsWith(input) && command !== input) ||
+        availableCompletions.find((command) => command.startsWith(input) && command !== input) ||
+        ''
+      : '';
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themes.find(item => item.id === theme)?.background || '#000000');
-    try { localStorage.setItem(themeKey, theme); } catch { /* Themes also work without storage. */ }
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', themes.find((item) => item.id === theme)?.background || '#000000');
+    try {
+      localStorage.setItem(themeKey, theme);
+    } catch {
+      /* Themes also work without storage. */
+    }
   }, [theme]);
 
   useEffect(() => {
-    document.documentElement.dataset.crt = crtEffects ? 'on' : 'off';
-    try { localStorage.setItem('portfolio-crt-effects', crtEffects ? 'on' : 'off'); } catch { /* Effects also work without storage. */ }
-  }, [crtEffects]);
+    document.documentElement.dataset.crt = crtSettings.enabled ? 'on' : 'off';
+    document.documentElement.dataset.crtAll = crtSettings.allDark ? 'on' : 'off';
+    document.documentElement.style.setProperty(
+      '--crt-scanline-opacity',
+      String(crtSettings.scanlines * 0.0024),
+    );
+    document.documentElement.style.setProperty('--crt-glow', String(crtSettings.glow));
+    try {
+      localStorage.setItem('portfolio-crt-effects', crtSettings.enabled ? 'on' : 'off');
+      localStorage.setItem('portfolio-crt-settings', JSON.stringify(crtSettings));
+    } catch {
+      /* Settings work without storage. */
+    }
+  }, [crtSettings]);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    try {
+      localStorage.setItem('portfolio-language', language);
+    } catch {
+      /* Language also works without storage. */
+    }
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('lang')) {
+      url.searchParams.set('lang', language);
+      window.history.replaceState(null, '', url);
+    }
+  }, [language]);
+
+  useEffect(() => {
+    function onHashChange() {
+      const hash = window.location.hash.slice(1);
+      if (
+        ![
+          'about',
+          'overview',
+          'work',
+          'experience',
+          'skills',
+          'contact',
+          ...Object.keys(filenames).map((id) => 'work/' + id),
+        ].includes(hash)
+      )
+        return;
+      const entry = initialEntries()[0];
+      shouldScroll.current = true;
+      setMode(null);
+      setEntries((items) => [...items.slice(-49), { ...entry, id: nextId.current++ }]);
+    }
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [setEntries, setMode]);
+
+  useLayoutEffect(() => {
+    const area = scrollRef.current;
+    if (!area) return;
+    area.scrollTop = scrollPositions.current[activeId] || 0;
+    scrollSizes.current[activeId] = { height: area.clientHeight, total: area.scrollHeight };
+    if (followOutput.current[activeId] === undefined)
+      followOutput.current[activeId] = area.scrollHeight <= area.clientHeight;
+  }, [activeId, mode]);
+
+  useEffect(() => {
+    const area = scrollRef.current;
+    if (!area) return;
+    const observer = new ResizeObserver(() => {
+      if (followOutput.current[activeId]) area.scrollTop = area.scrollHeight;
+      scrollSizes.current[activeId] = { height: area.clientHeight, total: area.scrollHeight };
+    });
+    observer.observe(area);
+    for (const selector of ['.transcript', '.prompt-line']) {
+      const element = area.querySelector(selector);
+      if (element) observer.observe(element);
+    }
+    return () => observer.disconnect();
+  }, [activeId, mode]);
 
   useEffect(() => {
     if (!shouldScroll.current) return;
@@ -75,24 +270,62 @@ function App() {
   }, [entries]);
 
   useEffect(() => {
-    if (window.matchMedia('(pointer: fine)').matches) inputRef.current?.focus({ preventScroll: true });
+    if (window.matchMedia('(pointer: fine)').matches)
+      inputRef.current?.focus({ preventScroll: true });
   }, []);
 
   useEffect(() => {
     function onKey(event: globalThis.KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        inputRef.current?.focus();
+        setMode(null);
+        requestAnimationFrame(() => inputRef.current?.focus());
       }
     }
     window.addEventListener('keydown', onKey);
-    return () => { window.removeEventListener('keydown', onKey); clearTimeout(copyTimeout.current); };
-  }, []);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [setMode]);
 
-  function append(command: string, view: View, message?: string, project?: string) {
+  useEffect(() => () => clearTimeout(copyTimeout.current), []);
+
+  function append(
+    command: string,
+    view: View,
+    message?: string,
+    project?: string,
+    search?: SearchRequest,
+  ) {
     shouldScroll.current = true;
-    setEntries(items => [...items.slice(-49), { id: nextId.current++, command, path, view, message, project }]);
-    if (['about', 'work', 'experience', 'skills', 'contact'].includes(view)) window.history.replaceState(null, '', '#' + view);
+    followOutput.current[activeId] = true;
+    const id = nextId.current++;
+    setEntries((items) => [
+      ...items.slice(-49),
+      { id, command, path, view, message, project, search },
+    ]);
+    if (view === 'project' && project) window.history.replaceState(null, '', '#work/' + project);
+    else if (['about', 'work', 'experience', 'skills', 'contact'].includes(view))
+      window.history.replaceState(null, '', '#' + view);
+    return id;
+  }
+
+  function closeMode() {
+    setMode(null);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  async function copyProjectLink(entry: Entry) {
+    try {
+      await navigator.clipboard.writeText(entry.message || '');
+      setEntries((items) =>
+        items.map((item) => (item.id === entry.id ? { ...item, copyStatus: 'copied' } : item)),
+      );
+    } catch {
+      setEntries((items) =>
+        items.map((item) => (item.id === entry.id ? { ...item, copyStatus: 'failed' } : item)),
+      );
+    }
   }
 
   function run(raw: string) {
@@ -104,62 +337,374 @@ function App() {
     setDraft('');
     setCompletions([]);
     setSearching(false);
-    if (!command) { append(requested, 'text', '!!: no previous command in this session.'); return; }
-    setHistory(items => [...items, command]);
+    setMode(null);
+    if (!command) {
+      append(
+        requested,
+        'text',
+        t(
+          '!!: no previous command in this session.',
+          '!!: no hay un comando anterior en esta sesión.',
+        ),
+      );
+      return;
+    }
+    setHistory((items) => [...items, command]);
     const normalized = command.toLowerCase().replace(/\s+/g, ' ');
     const [name, ...args] = normalized.split(' ');
     const argument = args.join(' ');
-    if (name === 'clear') { setEntries([]); return; }
+    if (name === 'lang') {
+      if (!['en', 'es'].includes(argument)) {
+        append(
+          command,
+          'text',
+          t(
+            'Usage: lang [en|es]. Current language: English.',
+            'Uso: lang [en|es]. Idioma actual: español.',
+          ),
+        );
+        return;
+      }
+      setLanguage(argument as Language);
+      append(command, 'text', argument === 'es' ? 'Idioma: español.' : 'Language: English.');
+      return;
+    }
+    if (name === 'tab') {
+      const [action, ...targetParts] = args;
+      const target = targetParts.join(' ');
+      if (!action || action === 'list') {
+        append(
+          command,
+          'text',
+          sessions
+            .map(
+              (item) =>
+                (item.id === activeId ? '* ' : '  ') +
+                item.id +
+                '  ' +
+                item.name +
+                '  ' +
+                item.path,
+            )
+            .join('\n'),
+        );
+        return;
+      }
+      if (action === 'new') {
+        if (!createSession(target || undefined))
+          append(
+            command,
+            'text',
+            t(
+              'Maximum 8 sessions. Close one before opening another.',
+              'Máximo 8 sesiones. Cierra una antes de abrir otra.',
+            ),
+          );
+        else {
+          append(command, 'text');
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }
+        return;
+      }
+      const chosen = target
+        ? sessions.find((item) => String(item.id) === target || item.name.toLowerCase() === target)
+        : session;
+      if (action === 'switch' && chosen) {
+        append(command, 'text');
+        switchSession(chosen.id);
+        return;
+      }
+      if (action === 'close' && chosen) {
+        if (!closeSession(chosen.id))
+          append(
+            command,
+            'text',
+            t('The last session stays open.', 'La última sesión permanece abierta.'),
+          );
+        else append(command, 'text');
+        return;
+      }
+      append(command, 'text', 'Usage: tab [list|new <name>|switch <id>|close <id>]');
+      return;
+    }
+    if (name === 'less') {
+      const file = resolveDocument(argument, path, language);
+      if (!file) {
+        append(
+          command,
+          'text',
+          t('less: no such file: ', 'less: no existe el archivo: ') + argument,
+        );
+        return;
+      }
+      append(command, 'text');
+      setMode({ type: 'pager', path: file.path });
+      return;
+    }
+    if (name === 'grep') {
+      const tokens = tokenize(command);
+      const values = tokens?.slice(1) || [];
+      const ignoreCase = values[0] === '-i';
+      if (ignoreCase) values.shift();
+      if (
+        !tokens ||
+        values.length < 1 ||
+        values.length > 2 ||
+        !values[0] ||
+        values[0].startsWith('-')
+      ) {
+        append(command, 'text', 'Usage: grep [-i] <text> [file|work/]');
+        return;
+      }
+      let target: string | undefined;
+      if (values[1]) {
+        if (['work', 'work/', '~/work', '~/work/'].includes(values[1])) target = 'work/';
+        else {
+          const file = resolveDocument(values[1], path, language);
+          if (!file) {
+            append(
+              command,
+              'text',
+              t('grep: no such file: ', 'grep: no existe el archivo: ') + values[1],
+            );
+            return;
+          }
+          target = file.path;
+        }
+      }
+      append(command, 'grep', undefined, undefined, { query: values[0], ignoreCase, target });
+      return;
+    }
+    if (name === 'share') {
+      const candidate =
+        argument.replace(/^(~\/)?work\//, '').replace(/\.md$/, '') ||
+        [...entries].reverse().find((item) => item.project)?.project;
+      const project = projects.find(
+        (item) => item.id === candidate || filenames[item.id].replace('.md', '') === candidate,
+      );
+      if (!project) {
+        append(command, 'text', 'Usage: share [healthcare|real-estate|pearai]');
+        return;
+      }
+      const url = new URL(window.location.pathname, window.location.origin);
+      url.searchParams.set('lang', language);
+      url.hash = 'work/' + project.id;
+      const id = append(command, 'share', url.href, project.id);
+      void copyProjectLink({
+        id,
+        command,
+        path,
+        view: 'share',
+        message: url.href,
+        project: project.id,
+      });
+      return;
+    }
+    if (name === 'snake') {
+      append(command, 'text');
+      setMode({ type: 'snake' });
+      return;
+    }
+    if (name === 'split') {
+      if (argument && !['on', 'off'].includes(argument)) {
+        append(command, 'text', 'Usage: split [on|off]');
+        return;
+      }
+      const enabled = argument ? argument === 'on' : !split;
+      setSplit(enabled);
+      if (enabled)
+        append(
+          command,
+          'project',
+          undefined,
+          [...entries].reverse().find((item) => item.project)?.project || 'healthcare',
+        );
+      else append(command, 'text', t('Split pane closed.', 'Panel dividido cerrado.'));
+      return;
+    }
+    if (name === 'clear') {
+      setEntries([]);
+      return;
+    }
     if (name === 'theme' || name === 'themes') {
-      if (!argument || argument === 'list') { append(command, 'themes'); return; }
+      if (!argument || argument === 'list') {
+        append(command, 'themes');
+        return;
+      }
       const choice = resolveTheme(argument);
-      if (!choice) { append(command, 'text', 'Usage: theme [dark|amber|phosphor|paper|light|list]'); return; }
+      if (!choice) {
+        append(command, 'text', 'Usage: theme [dark|amber|phosphor|paper|light|list]');
+        return;
+      }
       setTheme(choice);
-      append(command, 'text', 'Theme: ' + themes.find(item => item.id === choice)?.label + (choice === 'amber' || choice === 'phosphor' ? '\nUse crt off to remove scanlines and glow.' : ''));
+      append(
+        command,
+        'text',
+        'Theme: ' +
+          themes.find((item) => item.id === choice)?.label +
+          (choice === 'amber' || choice === 'phosphor'
+            ? '\nUse crt off to remove scanlines and glow.'
+            : ''),
+      );
       return;
     }
     if (name === 'crt') {
-      if (!argument) { append(command, 'text', 'CRT effects: ' + (crtEffects ? 'on' : 'off') + '. Applies to Amber CRT and Green CRT.\nUsage: crt [on|off]'); return; }
-      if (!['on', 'off'].includes(argument)) { append(command, 'text', 'Usage: crt [on|off]'); return; }
-      setCrtEffects(argument === 'on');
-      append(command, 'text', 'CRT effects: ' + argument + '. Applies to Amber CRT and Green CRT.');
+      if (!argument) {
+        append(command, 'crt');
+        return;
+      }
+      if (argument === 'soft' || argument === 'strong') setCrtSettings(crtPresets[argument]);
+      else if (argument === 'on' || argument === 'off')
+        setCrtSettings((value) => ({ ...value, enabled: argument === 'on', allDark: true }));
+      else if (
+        ['scanlines', 'glow'].includes(args[0]) &&
+        args.length === 2 &&
+        /^\d+$/.test(args[1]) &&
+        Number(args[1]) <= 100
+      )
+        setCrtSettings((value) => ({
+          ...value,
+          [args[0]]: Number(args[1]),
+          enabled: true,
+          allDark: true,
+        }));
+      else {
+        append(command, 'text', 'Usage: crt [on|off|soft|strong|scanlines 0..100|glow 0..100]');
+        return;
+      }
+      append(command, 'crt');
       return;
     }
     if (name === 'man') {
-      if (argument && !Object.hasOwn(manuals, argument)) { append(command, 'text', 'No manual entry for ' + argument + '. Run man to list available pages.'); return; }
+      if (argument && !Object.hasOwn(manuals, argument)) {
+        append(
+          command,
+          'text',
+          'No manual entry for ' + argument + '. Run man to list available pages.',
+        );
+        return;
+      }
       append(command, 'manual', argument || undefined);
       return;
     }
-    if (name === 'pwd') { append(command, 'text', '/home/maxfsp/portfolio' + (path === '~/work' ? '/work' : '')); return; }
-    if (name === 'history') { append(command, 'text', [...history, command].map((item, index) => String(index + 1).padStart(3) + '  ' + item).join('\n')); return; }
+    if (name === 'pwd') {
+      append(command, 'text', '/home/maxfsp/portfolio' + (path === '~/work' ? '/work' : ''));
+      return;
+    }
+    if (name === 'history') {
+      append(
+        command,
+        'text',
+        [...history, command]
+          .map((item, index) => String(index + 1).padStart(3) + '  ' + item)
+          .join('\n'),
+      );
+      return;
+    }
     if (name === 'tree') {
-      if (argument && !['work', 'work/', '~/work', '~/work/', '.', '~', '~/'].includes(argument)) { append(command, 'text', 'tree: no such directory: ' + argument); return; }
-      append(command, 'tree', argument.includes('work') || ((!argument || argument === '.') && path === '~/work') ? 'work' : 'root');
+      if (argument && !['work', 'work/', '~/work', '~/work/', '.', '~', '~/'].includes(argument)) {
+        append(command, 'text', 'tree: no such directory: ' + argument);
+        return;
+      }
+      append(
+        command,
+        'tree',
+        argument.includes('work') || ((!argument || argument === '.') && path === '~/work')
+          ? 'work'
+          : 'root',
+      );
       return;
     }
     if (name === 'cd') {
-      if (['work', 'work/', '~/work', '~/work/'].includes(argument)) { setPath('~/work'); append(command, 'text'); }
-      else if (['', '~', '..', '../', '/', '~/'].includes(argument)) { setPath('~'); append(command, 'text'); }
-      else append(command, 'text', 'cd: no such directory: ' + argument + '\nAvailable directory: ~/work');
+      if (['work', 'work/', '~/work', '~/work/'].includes(argument)) {
+        setPath('~/work');
+        append(command, 'text');
+      } else if (['', '~', '..', '../', '/', '~/'].includes(argument)) {
+        setPath('~');
+        append(command, 'text');
+      } else
+        append(
+          command,
+          'text',
+          'cd: no such directory: ' + argument + '\nAvailable directory: ~/work',
+        );
       return;
     }
-    const candidate = (name === 'cat' || name === 'work') && argument ? argument.replace(/^(~\/)?work\//, '').replace(/\.md$/, '') : '';
-    const selected = projects.find(project => project.id === candidate || filenames[project.id].replace('.md', '') === candidate);
-    if (selected) { append(command, 'project', undefined, selected.id); return; }
-    if (name === 'work' && argument) { append(command, 'text', 'work: no such entry: ' + argument + '\nRun ls work/ to see available files.'); return; }
-    if (name === 'cat' && argument === 'resume.pdf') { append(command, 'resume'); return; }
+    const candidate =
+      (name === 'cat' || name === 'work') && argument
+        ? argument.replace(/^(~\/)?work\//, '').replace(/\.md$/, '')
+        : '';
+    const selected = projects.find(
+      (project) =>
+        project.id === candidate || filenames[project.id].replace('.md', '') === candidate,
+    );
+    if (selected) {
+      append(command, 'project', undefined, selected.id);
+      return;
+    }
+    if (name === 'work' && argument) {
+      append(
+        command,
+        'text',
+        'work: no such entry: ' + argument + '\nRun ls work/ to see available files.',
+      );
+      return;
+    }
+    if (name === 'cat' && argument === 'resume.pdf') {
+      append(command, 'resume');
+      return;
+    }
     if (name === 'ls') {
-      if (argument && !['work', 'work/', '~/work', '~/work/', '.', '~', '~/'].includes(argument)) { append(command, 'text', 'ls: no such directory: ' + argument); return; }
-      append(command, argument.includes('work') || ((!argument || argument === '.') && path === '~/work') ? 'work' : 'help');
+      if (argument && !['work', 'work/', '~/work', '~/work/', '.', '~', '~/'].includes(argument)) {
+        append(command, 'text', 'ls: no such directory: ' + argument);
+        return;
+      }
+      append(
+        command,
+        argument.includes('work') || ((!argument || argument === '.') && path === '~/work')
+          ? 'work'
+          : 'help',
+      );
       return;
     }
-    const file = name === 'cat' ? argument.replace(/^~\//, '').replace(/\.txt$/, '') : name === 'open' ? argument : name;
-    const views: Record<string, View> = { whoami: 'about', about: 'about', overview: 'about', work: 'work', projects: 'work', experience: 'experience', skills: 'skills', contact: 'contact', help: 'help', resume: 'resume' };
-    if (Object.hasOwn(views, file)) { append(command, views[file]); return; }
-    append(command, 'text', name === 'cat' ? 'cat: no such file: ' + argument + '\nRun ls to see available files.' : name === 'open' ? 'Choose a section: about, work, experience, skills, contact.' : command + ': command not found\nRun help to see available commands.');
+    const file =
+      name === 'cat'
+        ? argument.replace(/^~\//, '').replace(/\.txt$/, '')
+        : name === 'open'
+          ? argument
+          : name;
+    const views: Record<string, View> = {
+      whoami: 'about',
+      about: 'about',
+      overview: 'about',
+      work: 'work',
+      projects: 'work',
+      experience: 'experience',
+      skills: 'skills',
+      contact: 'contact',
+      help: 'help',
+      resume: 'resume',
+    };
+    if (Object.hasOwn(views, file)) {
+      append(command, views[file]);
+      return;
+    }
+    append(
+      command,
+      'text',
+      name === 'cat'
+        ? 'cat: no such file: ' + argument + '\nRun ls to see available files.'
+        : name === 'open'
+          ? 'Choose a section: about, work, experience, skills, contact.'
+          : command + ': command not found\nRun help to see available commands.',
+    );
   }
 
-  function updateInput(value: string) { setInput(value); setCompletions([]); setSearchIndex(0); }
+  function updateInput(value: string) {
+    setInput(value);
+    setCompletions([]);
+    setSearchIndex(0);
+  }
 
   function selectHistory() {
     setInput(searchMatch || searchDraft);
@@ -168,31 +713,52 @@ function App() {
     setHistoryIndex(-1);
   }
 
-  function submit(event: FormEvent) { event.preventDefault(); if (searching) selectHistory(); else run(input); inputRef.current?.focus({ preventScroll: true }); }
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (searching) selectHistory();
+    else run(input);
+    inputRef.current?.focus({ preventScroll: true });
+  }
 
   function inputKeys(event: KeyboardEvent<HTMLInputElement>) {
     if (event.nativeEvent.isComposing) return;
     if (event.ctrlKey && event.key.toLowerCase() === 'r') {
       event.preventDefault();
       setCompletions([]);
-      if (!searching) { setSearchDraft(input); setInput(''); setSearchIndex(0); setSearching(true); }
-      else setSearchIndex(index => index + 1);
+      if (!searching) {
+        setSearchDraft(input);
+        setInput('');
+        setSearchIndex(0);
+        setSearching(true);
+      } else setSearchIndex((index) => index + 1);
       return;
     }
     if (searching) {
-      if (event.key === 'Escape' || (event.ctrlKey && event.key.toLowerCase() === 'g')) { event.preventDefault(); setInput(searchDraft); setSearching(false); }
-      else if (event.key === 'ArrowRight') { event.preventDefault(); selectHistory(); }
+      if (event.key === 'Escape' || (event.ctrlKey && event.key.toLowerCase() === 'g')) {
+        event.preventDefault();
+        setInput(searchDraft);
+        setSearching(false);
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        selectHistory();
+      }
       return;
     }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'l') {
-      event.preventDefault(); setEntries([]); setCompletions([]); return;
+      event.preventDefault();
+      setEntries([]);
+      setCompletions([]);
+      return;
     }
     if (event.key === 'ArrowUp') {
       event.preventDefault();
       setCompletions([]);
       if (historyIndex === -1) setDraft(input);
       const next = Math.min(historyIndex + 1, history.length - 1);
-      if (next >= 0) { setHistoryIndex(next); setInput(history[history.length - 1 - next]); }
+      if (next >= 0) {
+        setHistoryIndex(next);
+        setInput(history[history.length - 1 - next]);
+      }
     } else if (event.key === 'ArrowDown') {
       event.preventDefault();
       setCompletions([]);
@@ -206,93 +772,275 @@ function App() {
         scrollRef.current?.querySelector<HTMLButtonElement>('.completion-options button')?.focus();
         return;
       }
-      const options = availableCompletions.filter(command => command.startsWith(input.toLowerCase()));
+      const options = availableCompletions.filter((command) =>
+        command.startsWith(input.toLowerCase()),
+      );
       if (options.length) {
         event.preventDefault();
-        if (options.length === 1) { setInput(options[0]); setCompletions([]); }
-        else setCompletions(options);
+        if (options.length === 1) {
+          setInput(options[0]);
+          setCompletions([]);
+        } else setCompletions(options);
       }
-    } else if (event.key === 'ArrowRight' && suggestion && event.currentTarget.selectionStart === input.length && event.currentTarget.selectionEnd === input.length) {
-      event.preventDefault(); setInput(suggestion); setCompletions([]);
+    } else if (
+      event.key === 'ArrowRight' &&
+      suggestion &&
+      event.currentTarget.selectionStart === input.length &&
+      event.currentTarget.selectionEnd === input.length
+    ) {
+      event.preventDefault();
+      setInput(suggestion);
+      setCompletions([]);
     } else if (event.key === 'Escape') {
       if (completions.length) setCompletions([]);
-      else { setInput(''); setHistoryIndex(-1); }
+      else {
+        setInput('');
+        setHistoryIndex(-1);
+      }
     }
   }
 
   async function copyEmail() {
     try {
       await navigator.clipboard.writeText(profile.email);
-      setCopied(true); setCopyError(false);
+      setCopied(true);
+      setCopyError(false);
       clearTimeout(copyTimeout.current);
       copyTimeout.current = setTimeout(() => setCopied(false), 2500);
-    } catch { setCopyError(true); }
-  }
-
-  function commandButton(command: string, label?: string) {
-    return <button className="file-link" onClick={() => run(command)}>{label || command}</button>;
-  }
-
-  function renderOutput(entry: Entry) {
-    switch (entry.view) {
-      case 'about': return <div className="identity"><pre className="ascii-logo" aria-hidden="true">{ascii}</pre><div className="identity-details"><h2 className="identity-name">Santiago Paz Farfán</h2><p className="identity-role">Full-stack software engineer</p><dl><div><dt>based in</dt><dd>Houston, Texas</dd></div><div><dt>stack</dt><dd>TypeScript, React, Next.js, Python, AWS</dd></div><div><dt>experience</dt><dd>3+ years / web applications & backend services</dd></div><div><dt>languages</dt><dd>Spanish (native), English (fluent)</dd></div></dl><div className="identity-links"><a href={profile.github} target="_blank" rel="noreferrer">github ↗</a><a href={profile.linkedin} target="_blank" rel="noreferrer">linkedin ↗</a><a href={resumeUrl} download="Santiago-Paz-Farfan-Resume.pdf">resume.pdf ↓</a></div></div></div>;
-      case 'work': return <div className="work-output"><p className="output-comment">Professional work and open-source contributions.</p><div className="file-list">{projects.map(project => <div className="file-row" key={project.id}><span className="file-permission">{project.type === 'Open source' ? 'public ' : 'private'}</span><button className="file-link" onClick={() => run('cat work/' + filenames[project.id])} aria-label={'Read ' + project.title}>{filenames[project.id]}</button><span className="file-description">{project.category}</span></div>)}</div><p className="output-comment work-disclosure">Client source is private. Public recreations are not available yet.</p><p className="file-hint">Click a filename to read it, or type <span>work healthcare</span>.</p></div>;
-      case 'experience': return <div className="experience-output"><h2>Experience</h2>{experience.map((job, index) => <article className="job" key={job.company + index}><div className="job-heading"><h3>{job.company}</h3><span>{job.dates}</span></div><p className="job-role">{job.role}{job.client ? ' / ' + job.client : ''}</p><p>{job.detail}</p></article>)}<div className="education-output"><h3>Education</h3><p>Systems Engineering / Escuela Militar de Ingeniería</p><p className="output-comment">2024 / First in class, graduated with honors</p><p>MBA / UNEATLANTICO & UNINI-MX</p><p className="output-comment">In progress / Expected 2028</p></div></div>;
-      case 'skills': return <div className="skills-output"><h2>Skills</h2>{skillGroups.map(group => <div className="skill-row" key={group.title}><h3>{group.title}</h3><p>{group.skills.join(', ')}</p></div>)}</div>;
-      case 'contact': return <div className="contact-output"><h2>Contact</h2><dl><div><dt>email</dt><dd><a href={'mailto:' + profile.email}>{profile.email}</a></dd></div><div><dt>github</dt><dd><a href={profile.github} target="_blank" rel="noreferrer">github.com/MaxFSP ↗</a></dd></div><div><dt>linkedin</dt><dd><a href={profile.linkedin} target="_blank" rel="noreferrer">Santiago Paz Farfán ↗</a></dd></div></dl><div className="contact-controls"><a href={'mailto:' + profile.email}>[ send email ]</a><button onClick={copyEmail}>[ {copied ? 'copied' : 'copy email'} ]</button></div><p className="copy-status" role="status">{copied ? 'Email copied to clipboard.' : copyError ? 'Clipboard unavailable. Select the email address above or use send email.' : ''}</p></div>;
-      case 'project': {
-        const project = projects.find(item => item.id === entry.project);
-        if (!project) return <p>File not found. Run ls work/.</p>;
-        return <article className="project-output"><p className="output-comment">{'# ' + filenames[project.id]}</p><h2>{project.title}</h2><p className="project-organization">{project.organization}</p><p>{project.summary}</p><ul>{project.details.map(detail => <li key={detail}>{detail}</li>)}</ul><p className="project-stack">{project.tags.join(' / ')}</p><p className="project-note">{project.note}</p>{project.type === 'Open source' && <a href={profile.github} target="_blank" rel="noreferrer">Public contributions on GitHub ↗</a>}</article>;
-      }
-      case 'resume': return <div className="resume-output"><a href={resumeUrl} download="Santiago-Paz-Farfan-Resume.pdf">Download resume.pdf ↓</a><span className="output-comment">Santiago Maximiliano Paz Farfán / PDF</span></div>;
-      case 'manual': return <ManualPage name={entry.message} run={run} />;
-      case 'themes': return <div className="themes-output">
-        <h2>Themes</h2><p className="output-comment">Select one below, use the header picker, or run theme &lt;name&gt;.</p>
-        <div className="theme-list">{themes.map(item => <div className="theme-row" key={item.id}>
-          <button aria-label={'Apply ' + item.label + ' theme'} aria-pressed={theme === item.id} onClick={() => setTheme(item.id)}><span aria-hidden="true">{theme === item.id ? '[x]' : '[ ]'}</span> {item.id}</button>
-          <span>{item.description}</span>
-        </div>)}</div>
-        <button className="effects-toggle" aria-label="CRT effects" aria-pressed={crtEffects} onClick={() => setCrtEffects(value => !value)}>[{crtEffects ? 'x' : ' '}] CRT effects: {crtEffects ? 'on' : 'off'}</button>
-        <p className="output-comment">Static scanlines and soft glow, only in the two CRT themes. No flicker.</p>
-      </div>;
-      case 'tree': {
-        const workOnly = entry.message === 'work';
-        return <div className="tree-output"><p>{workOnly ? 'work/' : '.'}</p>{!workOnly && <>
-          {['about', 'experience', 'skills', 'contact'].map(file => <div className="tree-row" key={file}><span aria-hidden="true">├── </span><button className="file-link" onClick={() => run('cat ' + file + '.txt')}>{file}.txt</button></div>)}
-          <div className="tree-row"><span aria-hidden="true">├── </span><a href={resumeUrl} download="Santiago-Paz-Farfan-Resume.pdf">resume.pdf</a></div>
-          <div className="tree-row"><span aria-hidden="true">└── </span><button className="file-link" onClick={() => run('tree work')}>work/</button></div>
-        </>}{projects.map((project, index) => <div className={'tree-row ' + (!workOnly ? 'tree-child' : '')} key={project.id}><span aria-hidden="true">{index === projects.length - 1 ? '└── ' : '├── '}</span><button className="file-link" aria-label={'Read ' + project.title} onClick={() => run('cat work/' + filenames[project.id])}>{filenames[project.id]}</button></div>)}<p className="output-comment tree-summary">{workOnly ? '0 directories' : '1 directory'}, {projects.length + (workOnly ? 0 : 5)} files</p></div>;
-      }
-      case 'help': return <div className="help-output"><h2>Commands</h2><div className="help-grid">{[
-        ['whoami', 'Name, location, and background'], ['work', 'Professional work and contributions'], ['experience', 'Employment and education'], ['skills', 'Languages, frameworks, and tools'], ['contact', 'Email and profiles'], ['resume', 'Download my résumé'], ['tree', 'Browse the portfolio files'], ['history', 'Commands from this session'], ['theme', 'Choose a console theme'], ['crt', 'Scanline and glow settings'], ['man', 'Read command manuals'], ['!!', 'Repeat the last command'], ['clear', 'Clear the terminal'],
-      ].map(([command, description]) => <div key={command}>{commandButton(command)}<span>{description}</span></div>)}</div><p className="output-comment">Also: ls, pwd, cd work, cd .., cat &lt;filename&gt;</p><div className="available-files"><span className="output-comment">Files:</span>{['about', 'experience', 'skills', 'contact'].map(file => <button className="file-link" key={file} onClick={() => run('cat ' + file + '.txt')}>{file}.txt</button>)}{commandButton('work', 'work/')}</div><p className="output-comment">↑ / ↓ history · → accept suggestion · Tab complete · Ctrl+R search<br />Ctrl+L clear · Ctrl/Cmd+K focus prompt</p></div>;
-      case 'text': return entry.message ? <p className="plain-output">{entry.message}</p> : null;
+    } catch {
+      setCopyError(true);
     }
   }
 
-  return <div className="terminal-app">
-    <a href="#command-input" className="skip-link">Skip to command prompt</a>
-    <header className="window-bar">
-      <span className="window-title"><span aria-hidden="true">&gt;_</span><span>maxfsp<span className="title-host">@portfolio</span></span></span>
-      <nav className="command-nav" aria-label="Portfolio commands">{commands.map(command => <button key={command} onClick={() => run(command)}>{command}</button>)}</nav>
-      <div className="window-actions"><a href={resumeUrl} download="Santiago-Paz-Farfan-Resume.pdf" aria-label="Download résumé">resume ↓</a><select className="theme-picker" aria-label="Terminal theme" value={theme} onChange={event => { const choice = resolveTheme(event.target.value); if (choice) setTheme(choice); }}>{themes.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
-    </header>
-    <main className="terminal-scroll" ref={scrollRef} aria-label="Terminal output" tabIndex={0} onClick={event => { if (event.target === event.currentTarget && !window.getSelection()?.toString()) inputRef.current?.focus(); }}>
-      <h1 className="sr-only">Santiago Paz Farfán — terminal portfolio</h1>
-      <div className="transcript" role="log" aria-live="polite" aria-relevant="additions">{entries.map(entry => <section className="transcript-entry" key={entry.id}><div className="command-echo"><Prompt path={entry.path} /><span>{entry.command}</span></div><div className="command-output">{renderOutput(entry)}</div></section>)}</div>
-      <div className="prompt-line">
-        <form className="command-form" onSubmit={submit}>
-          {searching ? <span className="search-label">(reverse-i-search):</span> : <Prompt path={path} />}
-          <CommandInput value={input} suggestion={suggestion} inputRef={inputRef} searching={searching} onChange={updateInput} onKeyDown={inputKeys} />
-          <button type="submit" className="run-button" aria-label={searching ? 'Select history command' : 'Run command'}>↵</button>
-        </form>
-        {searching && <div className="history-search" role="status"><span>{searchMatch || (input ? 'No matching commands.' : 'No commands in this session.')}</span><small>Enter select / Esc cancel / Ctrl+R previous</small></div>}
-        {completions.length > 0 && <div className="completion-options" role="group" aria-label="Command completions" onKeyDown={event => { if (event.key === 'Escape') { setCompletions([]); inputRef.current?.focus(); } }}>{completions.map(option => <button key={option} onClick={() => { setInput(option); setCompletions([]); inputRef.current?.focus(); }}>{option}</button>)}</div>}
+  const activeDocument =
+    mode?.type === 'pager'
+      ? getDocuments(language).find((item) => item.path === mode.path)
+      : undefined;
+
+  return (
+    <div className="terminal-app">
+      <h1 className="sr-only">
+        Santiago Paz Farfán — {t('terminal portfolio', 'portafolio en terminal')}
+      </h1>
+      <a href="#command-input" className="skip-link" onClick={closeMode}>
+        {t('Skip to command prompt', 'Ir al comando')}
+      </a>
+      <header className="window-bar">
+        <span className="window-title">
+          <span aria-hidden="true">&gt;_</span>
+          <span>
+            maxfsp<span className="title-host">@portfolio</span>
+          </span>
+        </span>
+        <nav className="command-nav" aria-label="Portfolio commands">
+          {commands.map((command) => (
+            <button key={command} onClick={() => run(command)}>
+              {command}
+            </button>
+          ))}
+        </nav>
+        <div className="window-actions">
+          <a
+            href={resumeUrl}
+            download="Santiago-Paz-Farfan-Resume.pdf"
+            aria-label={t('Download résumé', 'Descargar currículum')}
+          >
+            {t('resume', 'CV')} ↓
+          </a>
+          <select
+            className="language-picker"
+            aria-label={t('Language', 'Idioma')}
+            value={language}
+            onChange={(event) => setLanguage(event.target.value as Language)}
+          >
+            <option value="en">EN</option>
+            <option value="es">ES</option>
+          </select>
+          <select
+            className="theme-picker"
+            aria-label={t('Terminal theme', 'Tema del terminal')}
+            value={theme}
+            onChange={(event) => {
+              const choice = resolveTheme(event.target.value);
+              if (choice) setTheme(choice);
+            }}
+          >
+            {themes.map((item) => (
+              <option key={item.id} value={item.id}>
+                {language === 'es' ? item.labelEs : item.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </header>
+      <SessionTabs
+        sessions={sessions}
+        activeId={activeId}
+        select={switchSession}
+        create={() => {
+          createSession();
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }}
+        close={() => closeSession(activeId)}
+        split={split}
+        toggleSplit={() => run(split ? 'split off' : 'split on')}
+        language={language}
+      />
+      <div
+        id="session-panel"
+        className={'workspace-panels ' + (split ? 'is-split' : '')}
+        role="tabpanel"
+        aria-labelledby={'session-tab-' + activeId}
+      >
+        {activeDocument ? (
+          <Pager document={activeDocument} language={language} onClose={closeMode} />
+        ) : mode?.type === 'snake' ? (
+          <Snake game={snake} setGame={setSnake} language={language} onClose={closeMode} />
+        ) : (
+          <main
+            className="terminal-scroll"
+            ref={scrollRef}
+            aria-label={t('Terminal output', 'Salida del terminal')}
+            tabIndex={0}
+            onScroll={(event) => {
+              const area = event.currentTarget;
+              const previous = scrollSizes.current[activeId];
+              if (
+                !previous ||
+                (previous.height === area.clientHeight && previous.total === area.scrollHeight)
+              )
+                followOutput.current[activeId] =
+                  area.scrollHeight - area.scrollTop - area.clientHeight < 32;
+              scrollSizes.current[activeId] = {
+                height: area.clientHeight,
+                total: area.scrollHeight,
+              };
+              scrollPositions.current[activeId] = area.scrollTop;
+            }}
+            onClick={(event) => {
+              if (event.target === event.currentTarget && !window.getSelection()?.toString())
+                inputRef.current?.focus();
+            }}
+          >
+            <div className="transcript" role="log" aria-live="polite" aria-relevant="additions">
+              {entries.map((entry) => (
+                <section className="transcript-entry" key={entry.id}>
+                  <div className="command-echo">
+                    <Prompt path={entry.path} />
+                    <span>{entry.command}</span>
+                  </div>
+                  <div className="command-output">
+                    <PortfolioOutput
+                      entry={entry}
+                      language={language}
+                      theme={theme}
+                      setTheme={setTheme}
+                      crtSettings={crtSettings}
+                      setCrtSettings={setCrtSettings}
+                      run={run}
+                      copyEmail={copyEmail}
+                      copied={copied}
+                      copyError={copyError}
+                      copyProjectLink={copyProjectLink}
+                    />
+                  </div>
+                </section>
+              ))}
+            </div>
+            <div className="prompt-line">
+              <form className="command-form" onSubmit={submit}>
+                {searching ? (
+                  <span className="search-label">(reverse-i-search):</span>
+                ) : (
+                  <Prompt path={path} />
+                )}
+                <CommandInput
+                  value={input}
+                  suggestion={suggestion}
+                  inputRef={inputRef}
+                  searching={searching}
+                  onChange={updateInput}
+                  onKeyDown={inputKeys}
+                  language={language}
+                />
+                <button
+                  type="submit"
+                  className="run-button"
+                  aria-label={
+                    searching
+                      ? t('Select history command', 'Seleccionar comando anterior')
+                      : t('Run command', 'Ejecutar comando')
+                  }
+                >
+                  ↵
+                </button>
+              </form>
+              {searching && (
+                <div className="history-search" role="status">
+                  <span>
+                    {searchMatch ||
+                      (input
+                        ? t('No matching commands.', 'No hay comandos coincidentes.')
+                        : t('No commands in this session.', 'No hay comandos en esta sesión.'))}
+                  </span>
+                  <small>
+                    {t(
+                      'Enter select / Esc cancel / Ctrl+R previous',
+                      'Enter selecciona / Esc cancela / Ctrl+R anterior',
+                    )}
+                  </small>
+                </div>
+              )}
+              {completions.length > 0 && (
+                <div
+                  className="completion-options"
+                  role="group"
+                  aria-label="Command completions"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                      setCompletions([]);
+                      inputRef.current?.focus();
+                    }
+                  }}
+                >
+                  {completions.map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => {
+                        setInput(option);
+                        setCompletions([]);
+                        inputRef.current?.focus();
+                      }}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </main>
+        )}
+        {split && <ChunkLab language={language} onClose={() => setSplit(false)} />}
       </div>
-    </main>
-    <footer id="input-help" className="terminal-foot"><span>Tab complete / ↑↓ history <span className="footer-detail">/ Ctrl+R search / Ctrl+L clear</span></span><button onClick={() => run('help')}>help</button></footer>
-  </div>;
+      <footer id="input-help" className="terminal-foot">
+        <span>
+          {mode?.type === 'pager' ? (
+            t('j/k scroll / / search / q exit', 'j/k desplaza / / busca / q sale')
+          ) : mode?.type === 'snake' ? (
+            t('Arrows / Space pause / q exit', 'Flechas / Espacio pausa / q sale')
+          ) : (
+            <>
+              {t('Tab complete / ↑↓ history', 'Tab completa / ↑↓ historial')}{' '}
+              <span className="footer-detail">
+                {t('/ Ctrl+R search / Ctrl+L clear', '/ Ctrl+R busca / Ctrl+L limpia')}
+              </span>
+            </>
+          )}
+        </span>
+        <button onClick={() => run('help')}>help</button>
+      </footer>
+    </div>
+  );
 }
 
 export default App;
