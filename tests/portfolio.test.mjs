@@ -70,7 +70,7 @@ test('production page is a black monospace terminal with identity and clickable 
 test('black is the default even on light devices; explicit light mode persists', async t => {
   const { page } = await openPage(t, { colorScheme: 'light' });
   assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
-  await page.getByRole('button', { name: 'Switch to light mode', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Terminal theme' }).selectOption('light');
   assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
   await page.reload();
   assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
@@ -86,7 +86,7 @@ test('black is the default even on light devices; explicit light mode persists',
 test('shell commands return actual resume content', async t => {
   const { page } = await openPage(t);
   for (const [command, expected] of [
-    ['help', 'Toggle light / dark'], ['whoami', 'Santiago Paz Farfán'],
+    ['help', 'Choose a console theme'], ['whoami', 'Santiago Paz Farfán'],
     ['skills', 'DynamoDB'], ['experience', 'Dec 2025 — Jun 2026'],
     ['cat experience.txt', 'Expected 2028'], ['contact', 'maximiliano.farfansp@gmail.com'],
   ]) {
@@ -217,11 +217,14 @@ test('mobile navigation and project reading work without typing', async t => {
 
 test('terminal fits phone through wide-screen widths and short viewports', async t => {
   const { page } = await openPage(t);
-  for (const width of [320, 375, 390, 600, 768, 960, 1024, 1440, 1920]) {
+  for (const theme of ['dark', 'amber', 'phosphor', 'paper', 'light']) {
+    await page.getByRole('combobox', { name: 'Terminal theme' }).selectOption(theme);
+    for (const width of [320, 375, 390, 600, 768, 960, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 844 });
-    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal page overflow at ' + width);
-    assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight), 'No vertical page overflow at ' + width);
-    assert.ok(await page.locator('.terminal-scroll').evaluate(element => element.scrollWidth <= element.clientWidth), 'Output fits at ' + width);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), theme + ': no horizontal page overflow at ' + width);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight), theme + ': no vertical page overflow at ' + width);
+    assert.ok(await page.locator('.terminal-scroll').evaluate(element => element.scrollWidth <= element.clientWidth), theme + ': output fits at ' + width);
+    }
   }
   await page.setViewportSize({ width: 390, height: 420 });
   await run(page, 'experience');
@@ -255,11 +258,11 @@ test('long output scrolls inside the terminal and new responses remain readable'
   assert.ok(outputBox.y >= 0 && outputBox.y + outputBox.height <= inputBox.y, 'New output is visible above the prompt');
 });
 
-for (const theme of ['dark', 'light']) {
+for (const theme of ['dark', 'light', 'amber', 'phosphor', 'paper']) {
   test(theme + ' terminal passes automated WCAG accessibility checks', async t => {
     const { page } = await openPage(t);
-    if (theme === 'light') await page.getByRole('button', { name: 'Switch to light mode', exact: true }).click();
-    for (const command of [null, 'work healthcare', 'help', 'contact']) {
+    await page.getByRole('combobox', { name: 'Terminal theme' }).selectOption(theme);
+    for (const command of [null, 'work healthcare', 'help', 'contact', 'theme', 'man theme']) {
       if (command) await run(page, command);
       const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
       assert.deepEqual(results.violations.map(({ id, nodes }) => ({ id, elements: nodes.map(node => ({ html: node.html, failure: node.failureSummary })) })), []);
@@ -373,4 +376,103 @@ test('history lists real session commands and remains available after clear', as
   await run(page, 'clear');
   await run(page, 'history');
   assert.match(await lastOutput(page).innerText(), /1  skills\n\s*2  pwd\n\s*3  clear\n\s*4  history/);
+});
+
+test('all five themes can be selected and restored after reload', async t => {
+  const { page } = await openPage(t);
+  const picker = page.getByRole('combobox', { name: 'Terminal theme' });
+  assert.equal(await picker.getByRole('option').count(), 5);
+  for (const theme of ['dark', 'amber', 'phosphor', 'paper', 'light']) {
+    await picker.selectOption(theme);
+    await page.reload();
+    await page.evaluate(() => document.fonts.ready);
+    assert.equal(await page.locator('html').getAttribute('data-theme'), theme);
+    assert.equal(await picker.inputValue(), theme);
+    assert.equal(await page.evaluate(() => localStorage.getItem('portfolio-terminal-theme')), theme);
+    if (theme === 'amber' || theme === 'phosphor') {
+      assert.match(await page.locator('.terminal-scroll').evaluate(element => getComputedStyle(element).fontFamily), /VT323/);
+      assert.ok(await page.evaluate(() => document.fonts.check('21px VT323')));
+    }
+    await page.screenshot({ path: 'test-results/theme-' + theme + '.png' });
+  }
+});
+
+test('theme commands, aliases, and clickable choices agree with the header', async t => {
+  const { page } = await openPage(t);
+  await run(page, 'theme');
+  assert.match(await lastOutput(page).innerText(), /Amber phosphor/);
+  await lastOutput(page).getByRole('button', { name: 'Apply Amber CRT theme', exact: true }).click();
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'amber');
+  assert.equal(await page.getByRole('combobox', { name: 'Terminal theme' }).inputValue(), 'amber');
+  assert.equal(await lastOutput(page).getByRole('button', { name: 'Apply Amber CRT theme', exact: true }).getAttribute('aria-pressed'), 'true');
+  for (const [command, expected] of [['theme green', 'phosphor'], ['theme black', 'dark'], ['theme retro', 'amber'], ['theme paper', 'paper'], ['theme light', 'light']]) {
+    await run(page, command);
+    assert.equal(await page.locator('html').getAttribute('data-theme'), expected);
+  }
+  await run(page, 'theme constructor');
+  assert.match(await lastOutput(page).innerText(), /Usage: theme/);
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
+  await run(page, 'theme list');
+  assert.equal(await lastOutput(page).getByRole('button', { name: /^Apply / }).count(), 5);
+  const input = page.getByRole('textbox', { name: 'Terminal command' });
+  await input.fill('theme a');
+  await input.press('Tab');
+  assert.equal(await input.inputValue(), 'theme amber');
+});
+
+test('CRT scanlines and glow are optional, static, and persist independently of the palette', async t => {
+  const { page } = await openPage(t);
+  await run(page, 'theme amber');
+  assert.equal(await page.locator('.terminal-app').evaluate(element => getComputedStyle(element, '::after').pointerEvents), 'none');
+  assert.equal(await page.locator('.terminal-app').evaluate(element => getComputedStyle(element, '::after').animationName), 'none');
+  assert.notEqual(await page.locator('.terminal-scroll').evaluate(element => getComputedStyle(element).textShadow), 'none');
+  await run(page, 'crt off');
+  assert.equal(await page.locator('html').getAttribute('data-crt'), 'off');
+  assert.equal(await page.locator('.terminal-scroll').evaluate(element => getComputedStyle(element).textShadow), 'none');
+  assert.equal(await page.locator('.terminal-app').evaluate(element => getComputedStyle(element, '::after').content), 'none');
+  await page.reload();
+  assert.equal(await page.locator('html').getAttribute('data-crt'), 'off');
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'amber');
+  await run(page, 'theme phosphor');
+  assert.equal(await page.locator('html').getAttribute('data-crt'), 'off');
+  await run(page, 'theme');
+  await lastOutput(page).getByRole('button', { name: 'CRT effects', exact: true }).click();
+  assert.equal(await page.locator('html').getAttribute('data-crt'), 'on');
+  await run(page, 'theme dark');
+  assert.equal(await page.locator('.terminal-app').evaluate(element => getComputedStyle(element, '::after').content), 'none');
+  await run(page, 'crt invalid');
+  assert.match(await lastOutput(page).innerText(), /Usage: crt/);
+});
+
+test('man pages explain commands, run examples, and handle missing topics', async t => {
+  const { page } = await openPage(t);
+  await run(page, 'man');
+  assert.ok(await lastOutput(page).getByRole('heading', { name: 'Manual pages' }).isVisible());
+  await lastOutput(page).getByRole('button', { name: 'theme', exact: true }).click();
+  assert.match(await lastOutput(page).innerText(), /theme\(1\)/);
+  assert.match(await lastOutput(page).innerText(), /theme \[dark\|amber\|phosphor\|paper\|light\|list\]/);
+  await lastOutput(page).getByRole('button', { name: 'theme amber', exact: true }).click();
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'amber');
+  await run(page, 'man history');
+  assert.match(await lastOutput(page).innerText(), /Ctrl\+R/);
+  await run(page, 'man missing');
+  assert.match(await lastOutput(page).innerText(), /No manual entry for missing/);
+  await run(page, 'man constructor');
+  assert.match(await lastOutput(page).innerText(), /No manual entry for constructor/);
+});
+
+test('!! repeats the expanded command without recursive history entries', async t => {
+  const { page } = await openPage(t);
+  await run(page, '!!');
+  assert.match(await lastOutput(page).innerText(), /no previous command/);
+  await run(page, 'pwd');
+  const expected = await lastOutput(page).innerText();
+  await run(page, '!!');
+  assert.equal(await lastOutput(page).innerText(), expected);
+  await run(page, '!!');
+  assert.equal(await lastOutput(page).innerText(), expected);
+  await run(page, 'history');
+  assert.match(await lastOutput(page).innerText(), /1  pwd\n\s*2  pwd\n\s*3  pwd\n\s*4  history/);
+  await run(page, 'man !!');
+  assert.match(await lastOutput(page).innerText(), /Run the last command again/);
 });

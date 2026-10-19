@@ -1,6 +1,6 @@
 # Santiago Paz Farfán — Terminal portfolio
 
-A browser-based portfolio shell built with React, TypeScript, and Vite. Black is the default. Work notes, experience, skills, and contact information are rendered as terminal output. Light mode is an explicit option. Fonts are local, and there is no backend or API-key requirement.
+A browser-based portfolio shell built with React, TypeScript, and Vite. Black is the default. Work notes, experience, skills, and contact information are rendered as terminal output. Five themes are available: Black, Light, Amber CRT, Green CRT, and Paper. The retro consoles use a pixel typeface and optional static scanlines and glow. Fonts are local, and there is no backend or API-key requirement.
 
 ## Develop
 
@@ -21,7 +21,7 @@ npm test
 npm run preview -- --port 4173 --strictPort
 ```
 
-`npm test` builds production assets, starts a temporary preview on port 4179, and runs 22 browser checks. These cover the pure-black default, persisted explicit themes, shell commands, directory and file handling, history and draft restoration, completion, inline suggestions, reverse history search, native text editing, file-tree navigation, keyboard shortcuts, clickable mobile navigation, clipboard success and failure, actual PDF downloads, direct links, scrolling, viewport sizes, and WCAG scans of both themes. Screenshots are saved to ignored `test-results/`.
+`npm test` builds production assets, starts a temporary preview on port 4179, and runs 30 browser checks. These cover the pure-black default, all five persisted themes and optional CRT effects, shell commands, directory and file handling, history and draft restoration, completion, inline suggestions, reverse history search, native text editing, file-tree navigation, keyboard shortcuts, clickable mobile navigation, clipboard success and failure, actual PDF downloads, direct links, scrolling, viewport sizes, command manuals, last-command expansion, and WCAG scans of all five themes. Screenshots are saved to ignored `test-results/`.
 
 Tests use `/usr/bin/chromium` when available. Otherwise use `npx playwright install chromium`, or set `CHROMIUM_PATH` to an installed executable. Port 4179 must be available.
 
@@ -32,7 +32,11 @@ Tests use `/usr/bin/chromium` when available. Otherwise use `npx playwright inst
 - `work healthcare`, `work real-estate`, `work pearai`: read a work note.
 - `experience`, `skills`, `contact`, `resume`: corresponding content.
 - `ls`, `pwd`, `cd work`, `cd ..`, `cat <filename>`: navigate portfolio files.
-- `theme`, `theme dark`, `theme light`: change appearance.
+- `theme` or `theme list`: list themes with clickable choices. The header picker also switches themes.
+- `theme dark`, `theme light`, `theme amber`, `theme phosphor`, `theme paper`: apply a theme. Aliases: `black`, `green`, and `retro`.
+- `crt`, `crt on`, `crt off`: inspect or change static scanlines and glow. This preference is stored independently and only affects the two CRT themes.
+- `man` or `man <command>`: read command syntax, behavior, and runnable examples.
+- `!!`: repeat the last command. History records the expanded command, rather than the expansion token.
 - `tree` or `tree work`: browse clickable files in a directory tree.
 - `history`: list commands from the current session.
 - `clear`: clear scrollback.
@@ -44,7 +48,7 @@ The inline prompt uses native text editing beneath a block cursor. Arrow keys re
 
 Edit `src/content.ts` for work notes, profile links, skills, and employment history. Professional client source is private. Public recreations have not been presented as finished or available. Add accurate public repository or demo links when those projects exist.
 
-Replace `public/resume.pdf` when updating your résumé. The shell and command handling live in `src/App.tsx`; the native input and cursor renderer live in `src/components/CommandInput.tsx`; appearance lives in `src/styles.css`.
+Replace `public/resume.pdf` when updating your résumé. The shell and command handling live in `src/App.tsx`; the native input and cursor renderer live in `src/components/CommandInput.tsx`; appearance lives in `src/styles.css`. Theme metadata and aliases are in `src/themes.ts`; manuals are in `src/manual.ts`. Both IBM Plex Mono and VT323 are bundled locally.
 
 ## Cloudflare
 

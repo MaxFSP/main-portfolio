@@ -24,13 +24,43 @@
   --hover: #f2f2f2;
   --prompt: #3d5c31;
 }
+:root[data-theme='amber'] {
+  --bg: #0e0b05;
+  --text: #edb565;
+  --bright: #ffd489;
+  --muted: #b58a50;
+  --line: #44321e;
+  --hover: #21180b;
+  --prompt: #ffd489;
+  --glow: #ffb24338;
+}
+:root[data-theme='phosphor'] {
+  --bg: #020a04;
+  --text: #8fcb86;
+  --bright: #b2f4a3;
+  --muted: #77a66d;
+  --line: #1d4224;
+  --hover: #0c2110;
+  --prompt: #b2f4a3;
+  --glow: #89ff6730;
+}
+:root[data-theme='paper'] {
+  color-scheme: light;
+  --bg: #f1e9d7;
+  --text: #3f3b32;
+  --bright: #252219;
+  --muted: #716754;
+  --line: #cbc1a9;
+  --hover: #e9dfc8;
+  --prompt: #5b633e;
+}
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
-button, input { font: inherit; color: inherit; }
+button, input, select { font: inherit; color: inherit; }
 button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; background: transparent; border: 0; border-radius: 0; }
-button, a, input { outline-offset: 4px; }
-button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--bright); }
+button, a, input, select { outline-offset: 4px; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--bright); }
 a { color: inherit; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 a:hover, button:hover { color: var(--bright); }
 ::selection { color: var(--bg); background: var(--bright); }
@@ -49,6 +79,7 @@ h1, h2, h3 { font-size: inherit; font-weight: 500; }
 .window-actions a { text-decoration: none; }
 .window-actions a, .window-actions button { min-height: 34px; display: inline-flex; align-items: center; }
 .window-actions button { padding: 0; font-size: 11px; }
+.theme-picker { background: var(--bg); border: 1px solid var(--line); border-radius: 0; color: var(--text); width: 110px; padding: 6px 5px; font-size: 10px; min-height: 30px; cursor: pointer; }
 .command-nav { display: flex; gap: 21px; align-items: center; min-width: 0; font-size: 11px; overflow: auto; scrollbar-width: none; }
 .command-nav::-webkit-scrollbar { display: none; }
 .command-nav button { padding: 3px 0; min-height: 28px; }
@@ -150,6 +181,17 @@ h1, h2, h3 { font-size: inherit; font-weight: 500; }
 .tree-row > span { color: var(--muted); }
 .tree-child { padding-left: 4ch; }
 .tree-summary { margin-top: 15px; }
+.theme-list { margin: 18px 0; }
+.theme-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: baseline; padding: 5px 0; max-width: 800px; }
+.theme-row button { text-align: left; padding: 4px 0; color: var(--bright); }
+.theme-row > span { font-size: 12px; color: var(--muted); }
+.effects-toggle { font-size: 12px; color: var(--text); padding: 8px 0; margin-bottom: 5px; }
+.manual-page { max-width: 76ch; font-size: 13px; }
+.manual-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 15px; }
+.manual-heading > span { font-size: 11px; color: var(--muted); }
+.manual-page h3 { margin: 23px 0 9px; color: var(--muted); font-size: 11px; font-weight: 400; }
+.manual-examples { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.manual-links { display: flex; flex-wrap: wrap; gap: 8px 25px; max-width: 700px; margin-top: 20px; }
 .run-button { font-size: 20px; color: var(--muted); min-width: 36px; min-height: 36px; padding: 0; }
 .run-button:hover { color: var(--bright); }
 .terminal-foot { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 10px; padding: 6px 27px; border-top: 1px solid var(--line); flex-shrink: 0; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
@@ -169,6 +211,10 @@ h1, h2, h3 { font-size: inherit; font-weight: 500; }
   .identity-details dt { width: auto; font-size: 10px; }
   .file-row { grid-template-columns: 58px 225px 1fr; gap: 12px; }
   .command-nav { gap: 18px; }
+}
+@media (max-width: 780px) {
+  .window-bar { grid-template-columns: 1fr auto; padding: 8px 20px 6px; gap: 7px 16px; }
+  .command-nav { grid-column: 1 / -1; grid-row: 2; padding: 0; }
 }
 @media (max-width: 600px) {
   .terminal-app { font-size: 12px; }
@@ -219,8 +265,46 @@ h1, h2, h3 { font-size: inherit; font-weight: 500; }
   .search-label { font-size: 10px; }
   .completion-options { font-size: 11px; gap: 3px 15px; }
   .tree-output { font-size: 11px; }
+  .theme-row { grid-template-columns: 110px minmax(0, 1fr); gap: 12px; }
+  .theme-row > span { font-size: 10px; }
+  .theme-row button, .effects-toggle { font-size: 11px; }
+  .manual-page { font-size: 12px; }
+  .manual-heading > span { font-size: 10px; }
   .terminal-foot { font-size: 9px; padding: 6px 20px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
   .footer-detail { display: none; }
+}
+:root:is([data-theme='amber'], [data-theme='phosphor']) .terminal-scroll {
+  font-family: 'VT323', monospace;
+  font-size: 21px;
+  line-height: 1.35;
+}
+:root:is([data-theme='amber'], [data-theme='phosphor']) .terminal-scroll :is(.command-echo, .terminal-input, .identity-role, .tree-output) {
+  font-size: 21px;
+}
+:root:is([data-theme='amber'], [data-theme='phosphor']) .identity .identity-name { font-size: 30px; letter-spacing: 0; }
+:root:is([data-theme='amber'], [data-theme='phosphor']) .terminal-scroll :is(.identity-details dl, .contact-output dl, .output-comment, .file-description, .project-output, .help-output, .plain-output, .manual-page, .skill-row, .job > p:last-child) {
+  font-size: 20px;
+}
+:root:is([data-theme='amber'], [data-theme='phosphor']) .terminal-scroll :is(.identity-links, .file-permission, .file-hint, .project-tags, .job-role, .job-heading > span, .theme-row > span, .effects-toggle, .manual-heading > span, .manual-page h3, .search-label, .history-search, .completion-options, .contact-controls, .copy-status, .education-output) {
+  font-size: 18px;
+}
+:root:is([data-theme='amber'], [data-theme='phosphor']) .terminal-scroll .identity-details dt { width: 90px; }
+:root:is([data-theme='amber'], [data-theme='phosphor']) .command-output h2 { font-size: 24px; }
+:root:is([data-theme='amber'], [data-theme='phosphor'])[data-crt='on'] .terminal-scroll { text-shadow: 0 0 6px var(--glow); }
+:root:is([data-theme='amber'], [data-theme='phosphor'])[data-crt='on'] .terminal-app::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 3px, #00000012 3px, #00000012 4px);
+}
+@media (max-width: 600px) {
+  :root:is([data-theme='amber'], [data-theme='phosphor']) .identity .identity-name { font-size: 28px; }
+  :root:is([data-theme='amber'], [data-theme='phosphor']) .terminal-scroll .identity-details dt { width: auto; font-size: 17px; }
+  :root:is([data-theme='amber'], [data-theme='phosphor']) .terminal-scroll .file-row .file-link { font-size: 19px; }
+  :root:is([data-theme='amber'], [data-theme='phosphor']) .terminal-scroll .contact-controls { font-size: 18px; }
+  :root:is([data-theme='amber'], [data-theme='phosphor']) .terminal-scroll .file-description { font-size: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }

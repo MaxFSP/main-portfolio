@@ -2,13 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { experience, profile, projects, skillGroups } from './content';
 import CommandInput from './components/CommandInput';
+import ManualPage from './components/ManualPage';
+import { manuals } from './manual';
+import { resolveTheme, themes } from './themes';
+import type { Theme } from './themes';
 
-type View = 'about' | 'work' | 'experience' | 'skills' | 'contact' | 'help' | 'project' | 'resume' | 'tree' | 'text';
+type View = 'about' | 'work' | 'experience' | 'skills' | 'contact' | 'help' | 'project' | 'resume' | 'tree' | 'themes' | 'manual' | 'text';
 type Entry = { id: number; command: string; path: string; view: View; project?: string; message?: string };
-type Theme = 'dark' | 'light';
 const resumeUrl = import.meta.env.BASE_URL + 'resume.pdf';
 const commands = ['whoami', 'work', 'experience', 'skills', 'contact', 'help'];
-const completionOptions = [...commands, 'about', 'ls', 'pwd', 'resume', 'theme', 'clear', 'tree', 'history', 'cat about.txt', 'cat experience.txt', 'cat skills.txt', 'cat contact.txt', 'cat work/healthcare-audio.md', 'cat work/real-estate.md', 'cat work/pearai.md', 'cd work', 'cd ..'];
+const completionOptions = [...commands, 'about', 'ls', 'pwd', 'resume', 'theme', ...themes.map(theme => 'theme ' + theme.id), 'crt on', 'crt off', 'clear', 'tree', 'history', '!!', 'man', ...Object.keys(manuals).map(command => 'man ' + command), 'cat about.txt', 'cat experience.txt', 'cat skills.txt', 'cat contact.txt', 'cat work/healthcare-audio.md', 'cat work/real-estate.md', 'cat work/pearai.md', 'cd work', 'cd ..'];
 const filenames: Record<string, string> = { healthcare: 'healthcare-audio.md', 'real-estate': 'real-estate.md', pearai: 'pearai.md' };
 const ascii = ["   _____ ____  ______", "  / ___// __ \\/ ____/", "  \\__ \\/ /_/ / /_   ", " ___/ / ____/ __/   ", "/____/_/   /_/      "].join('\n');
 const themeKey = 'portfolio-terminal-theme';
@@ -29,7 +32,8 @@ function Prompt({ path = '~' }: { path?: string }) {
 }
 
 function App() {
-  const [theme, setTheme] = useState<Theme>(() => document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
+  const [theme, setTheme] = useState<Theme>(() => resolveTheme(document.documentElement.dataset.theme || '') || 'dark');
+  const [crtEffects, setCrtEffects] = useState(() => document.documentElement.dataset.crt !== 'off');
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
@@ -54,9 +58,14 @@ function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#000000' : '#ffffff');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themes.find(item => item.id === theme)?.background || '#000000');
     try { localStorage.setItem(themeKey, theme); } catch { /* Themes also work without storage. */ }
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.dataset.crt = crtEffects ? 'on' : 'off';
+    try { localStorage.setItem('portfolio-crt-effects', crtEffects ? 'on' : 'off'); } catch { /* Effects also work without storage. */ }
+  }, [crtEffects]);
 
   useEffect(() => {
     if (!shouldScroll.current) return;
@@ -80,8 +89,6 @@ function App() {
     return () => { window.removeEventListener('keydown', onKey); clearTimeout(copyTimeout.current); };
   }, []);
 
-  function toggleTheme() { setTheme(value => value === 'dark' ? 'light' : 'dark'); }
-
   function append(command: string, view: View, message?: string, project?: string) {
     shouldScroll.current = true;
     setEntries(items => [...items.slice(-49), { id: nextId.current++, command, path, view, message, project }]);
@@ -89,23 +96,38 @@ function App() {
   }
 
   function run(raw: string) {
-    const command = raw.trim();
-    if (!command) return;
-    setHistory(items => [...items, command]);
+    const requested = raw.trim();
+    if (!requested) return;
+    const command = requested === '!!' ? history.at(-1) : requested;
     setHistoryIndex(-1);
     setInput('');
     setDraft('');
     setCompletions([]);
     setSearching(false);
+    if (!command) { append(requested, 'text', '!!: no previous command in this session.'); return; }
+    setHistory(items => [...items, command]);
     const normalized = command.toLowerCase().replace(/\s+/g, ' ');
     const [name, ...args] = normalized.split(' ');
     const argument = args.join(' ');
     if (name === 'clear') { setEntries([]); return; }
-    if (name === 'theme') {
-      if (argument && !['dark', 'light'].includes(argument)) { append(command, 'text', 'Usage: theme [dark|light]'); return; }
-      const choice = argument ? argument as Theme : theme === 'dark' ? 'light' : 'dark';
+    if (name === 'theme' || name === 'themes') {
+      if (!argument || argument === 'list') { append(command, 'themes'); return; }
+      const choice = resolveTheme(argument);
+      if (!choice) { append(command, 'text', 'Usage: theme [dark|amber|phosphor|paper|light|list]'); return; }
       setTheme(choice);
-      append(command, 'text', 'Theme: ' + choice);
+      append(command, 'text', 'Theme: ' + themes.find(item => item.id === choice)?.label + (choice === 'amber' || choice === 'phosphor' ? '\nUse crt off to remove scanlines and glow.' : ''));
+      return;
+    }
+    if (name === 'crt') {
+      if (!argument) { append(command, 'text', 'CRT effects: ' + (crtEffects ? 'on' : 'off') + '. Applies to Amber CRT and Green CRT.\nUsage: crt [on|off]'); return; }
+      if (!['on', 'off'].includes(argument)) { append(command, 'text', 'Usage: crt [on|off]'); return; }
+      setCrtEffects(argument === 'on');
+      append(command, 'text', 'CRT effects: ' + argument + '. Applies to Amber CRT and Green CRT.');
+      return;
+    }
+    if (name === 'man') {
+      if (argument && !Object.hasOwn(manuals, argument)) { append(command, 'text', 'No manual entry for ' + argument + '. Run man to list available pages.'); return; }
+      append(command, 'manual', argument || undefined);
       return;
     }
     if (name === 'pwd') { append(command, 'text', '/home/maxfsp/portfolio' + (path === '~/work' ? '/work' : '')); return; }
@@ -224,6 +246,16 @@ function App() {
         return <article className="project-output"><p className="output-comment">{'# ' + filenames[project.id]}</p><h2>{project.title}</h2><p className="project-organization">{project.organization}</p><p>{project.summary}</p><ul>{project.details.map(detail => <li key={detail}>{detail}</li>)}</ul><p className="project-stack">{project.tags.join(' / ')}</p><p className="project-note">{project.note}</p>{project.type === 'Open source' && <a href={profile.github} target="_blank" rel="noreferrer">Public contributions on GitHub ↗</a>}</article>;
       }
       case 'resume': return <div className="resume-output"><a href={resumeUrl} download="Santiago-Paz-Farfan-Resume.pdf">Download resume.pdf ↓</a><span className="output-comment">Santiago Maximiliano Paz Farfán / PDF</span></div>;
+      case 'manual': return <ManualPage name={entry.message} run={run} />;
+      case 'themes': return <div className="themes-output">
+        <h2>Themes</h2><p className="output-comment">Select one below, use the header picker, or run theme &lt;name&gt;.</p>
+        <div className="theme-list">{themes.map(item => <div className="theme-row" key={item.id}>
+          <button aria-label={'Apply ' + item.label + ' theme'} aria-pressed={theme === item.id} onClick={() => setTheme(item.id)}><span aria-hidden="true">{theme === item.id ? '[x]' : '[ ]'}</span> {item.id}</button>
+          <span>{item.description}</span>
+        </div>)}</div>
+        <button className="effects-toggle" aria-label="CRT effects" aria-pressed={crtEffects} onClick={() => setCrtEffects(value => !value)}>[{crtEffects ? 'x' : ' '}] CRT effects: {crtEffects ? 'on' : 'off'}</button>
+        <p className="output-comment">Static scanlines and soft glow, only in the two CRT themes. No flicker.</p>
+      </div>;
       case 'tree': {
         const workOnly = entry.message === 'work';
         return <div className="tree-output"><p>{workOnly ? 'work/' : '.'}</p>{!workOnly && <>
@@ -233,7 +265,7 @@ function App() {
         </>}{projects.map((project, index) => <div className={'tree-row ' + (!workOnly ? 'tree-child' : '')} key={project.id}><span aria-hidden="true">{index === projects.length - 1 ? '└── ' : '├── '}</span><button className="file-link" aria-label={'Read ' + project.title} onClick={() => run('cat work/' + filenames[project.id])}>{filenames[project.id]}</button></div>)}<p className="output-comment tree-summary">{workOnly ? '0 directories' : '1 directory'}, {projects.length + (workOnly ? 0 : 5)} files</p></div>;
       }
       case 'help': return <div className="help-output"><h2>Commands</h2><div className="help-grid">{[
-        ['whoami', 'Name, location, and background'], ['work', 'Professional work and contributions'], ['experience', 'Employment and education'], ['skills', 'Languages, frameworks, and tools'], ['contact', 'Email and profiles'], ['resume', 'Download my résumé'], ['tree', 'Browse the portfolio files'], ['history', 'Commands from this session'], ['theme', 'Toggle light / dark'], ['clear', 'Clear the terminal'],
+        ['whoami', 'Name, location, and background'], ['work', 'Professional work and contributions'], ['experience', 'Employment and education'], ['skills', 'Languages, frameworks, and tools'], ['contact', 'Email and profiles'], ['resume', 'Download my résumé'], ['tree', 'Browse the portfolio files'], ['history', 'Commands from this session'], ['theme', 'Choose a console theme'], ['crt', 'Scanline and glow settings'], ['man', 'Read command manuals'], ['!!', 'Repeat the last command'], ['clear', 'Clear the terminal'],
       ].map(([command, description]) => <div key={command}>{commandButton(command)}<span>{description}</span></div>)}</div><p className="output-comment">Also: ls, pwd, cd work, cd .., cat &lt;filename&gt;</p><div className="available-files"><span className="output-comment">Files:</span>{['about', 'experience', 'skills', 'contact'].map(file => <button className="file-link" key={file} onClick={() => run('cat ' + file + '.txt')}>{file}.txt</button>)}{commandButton('work', 'work/')}</div><p className="output-comment">↑ / ↓ history · → accept suggestion · Tab complete · Ctrl+R search<br />Ctrl+L clear · Ctrl/Cmd+K focus prompt</p></div>;
       case 'text': return entry.message ? <p className="plain-output">{entry.message}</p> : null;
     }
@@ -244,7 +276,7 @@ function App() {
     <header className="window-bar">
       <span className="window-title"><span aria-hidden="true">&gt;_</span><span>maxfsp<span className="title-host">@portfolio</span></span></span>
       <nav className="command-nav" aria-label="Portfolio commands">{commands.map(command => <button key={command} onClick={() => run(command)}>{command}</button>)}</nav>
-      <div className="window-actions"><a href={resumeUrl} download="Santiago-Paz-Farfan-Resume.pdf" aria-label="Download résumé">resume ↓</a><button onClick={toggleTheme} aria-label={'Switch to ' + (theme === 'dark' ? 'light' : 'dark') + ' mode'}>[ {theme === 'dark' ? 'light' : 'dark'} ]</button></div>
+      <div className="window-actions"><a href={resumeUrl} download="Santiago-Paz-Farfan-Resume.pdf" aria-label="Download résumé">resume ↓</a><select className="theme-picker" aria-label="Terminal theme" value={theme} onChange={event => { const choice = resolveTheme(event.target.value); if (choice) setTheme(choice); }}>{themes.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
     </header>
     <main className="terminal-scroll" ref={scrollRef} aria-label="Terminal output" tabIndex={0} onClick={event => { if (event.target === event.currentTarget && !window.getSelection()?.toString()) inputRef.current?.focus(); }}>
       <h1 className="sr-only">Santiago Paz Farfán — terminal portfolio</h1>

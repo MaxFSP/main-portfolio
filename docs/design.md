@@ -41,3 +41,11 @@ Tab complete / ↑↓ history / Ctrl+R search / Ctrl+L clear
 Names and project descriptions are factual. Project notes open inline as readable command output. Clicking the commands or filenames provides access without requiring visitors to know shell commands. Actual email, GitHub, LinkedIn, and résumé links remain normal browser links.
 
 Commands live in the top header. The input is a prompt in the same terminal canvas, immediately after command output, without a separate panel or underline. It sticks to the bottom when output is longer than the viewport. A block cursor follows native caret movement; typing, selection, paste, horizontal scrolling, and mobile keyboards remain native. Inline suggestions favor recent commands. Tab shows ambiguous matches, Ctrl+R searches session history, and tree renders clickable portfolio files. The cursor blinks only with focus and respects reduced motion. There are no boot delays, fake server statistics, or decorative window controls.
+
+## Optional console themes
+
+Black remains the default. Amber CRT uses amber phosphor on a warm black canvas; Green CRT uses green phosphor on a dark green-black canvas. Both use the locally bundled VT323 pixel font at a larger size than IBM Plex Mono. Header controls remain in IBM Plex Mono. Paper uses dark ink on warm paper; Light remains black on white.
+
+A native theme picker sits in the existing header. Running theme shows a plain text list of the same choices. Preferences restore before rendering, and previously saved Black or Light choices remain valid. Static scanlines and soft glow can be disabled with crt off, separately from the selected theme. The overlay ignores pointer input; it never flickers or animates. Cursor blinking still respects reduced motion.
+
+Command manuals use inline text output and clickable examples. History expansion supports !! without executing arbitrary JavaScript or server commands.

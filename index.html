@@ -13,7 +13,8 @@
     <script>
       try {
         const saved = localStorage.getItem('portfolio-terminal-theme');
-        document.documentElement.dataset.theme = saved === 'light' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = ['dark', 'light', 'amber', 'phosphor', 'paper'].includes(saved) ? saved : 'dark';
+        document.documentElement.dataset.crt = localStorage.getItem('portfolio-crt-effects') === 'off' ? 'off' : 'on';
       } catch { document.documentElement.dataset.theme = 'dark'; }
     </script>
   </head>
