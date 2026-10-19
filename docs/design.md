@@ -1,35 +1,43 @@
-# Design direction
+# Terminal design
 
-The portfolio is a personal developer workspace: a quiet explorer, a readable document, and a real interactive shell. The content comes from Santiago’s résumé. Client work is presented as contribution notes; future recreations are not represented as finished projects.
+The page is a terminal, with commands, a scrollback buffer, inline text output, and a persistent input prompt. There is no landing-page hero, sidebar, project-card grid, simulated dashboard, or marketing copy.
 
 ## Tokens
 
-Dark palette: workspace `#101820`, sidebar `#0c131a`, text `#e7edf2`, powder blue `#aed1ee`, sage `#a9c7b9`, lavender `#c2afd5`.
+- Black `#000000`: default canvas, including on devices set to light appearance.
+- White `#f1f1f1`: headings, filenames, and ASCII initials.
+- Gray `#d4d4d4`: body text.
+- Gray `#949494`: metadata and secondary output.
+- Charcoal `#242424`: terminal boundaries.
+- Muted green `#b5cba8`: the shell username only.
 
-Light palette: workspace `#f5f7f9`, sidebar `#eaf0f4`, text `#1e3445`, ink blue `#2d6288`, sage `#3e7061`, lavender `#76588a`.
+Optional light mode inverts the same interface onto white with dark text. The terminal stores its explicit theme preference separately from the previous design, so previous browser settings do not override the new black default.
 
-Space Grotesk carries the headings and readable prose. IBM Plex Mono is reserved for the shell, file paths, and compact technical information. Both are bundled locally. Blue is the primary interaction color; sage and lavender distinguish the project illustrations.
+IBM Plex Mono is the only typeface. It is hosted locally. The entire layout uses terminal-sized type and character-based spacing.
 
-## Layout
+## Structure
 
 ```text
-┌──────────┬──────────────────────────────────────┐
-│ Explorer │ breadcrumb           commands/theme │
-│          ├──────────────────────┬───────────────┤
-│ overview │ name + introduction  │ working shell │
-│ work     ├──────────────────────┴───────────────┤
-│ history  │ everyday toolkit                     │
-│ about    ├────────────┬────────────┬────────────┤
-│ contact  │ healthcare │ real estate│ open source│
-│          ├────────────┴────────────┴────────────┤
-│ socials  │ experience / about / contact          │
-└──────────┴──────────────────────────────────────┘
+maxfsp@portfolio: ~                            resume / theme
+run: whoami  work  experience  skills  contact  help
+-----------------------------------------------------------
+maxfsp@portfolio:~$ whoami
+
+[ASCII initials]   Santiago Paz Farfán
+                   Full-stack software engineer
+                   location / stack / background / links
+
+maxfsp@portfolio:~$ ls work/
+
+private  healthcare-audio.md    Healthcare infrastructure
+private  real-estate.md         Web applications
+public   pearai.md              Developer tools
+
+-----------------------------------------------------------
+maxfsp@portfolio:~$ [command input]                        ↵
+↑↓ history / Tab complete / Ctrl+L clear                 help
 ```
 
-Content is left aligned. Mobile turns the explorer into a keyboard-accessible drawer and stacks the shell and work notes. The main navigation remains usable without knowing any terminal commands.
+Names and project descriptions are factual. Project notes open inline as readable command output. Clicking the commands or filenames provides access without requiring visitors to know shell commands. Actual email, GitHub, LinkedIn, and résumé links remain normal browser links.
 
-## Review and restraint
-
-A green-on-black terminal would be an obvious default for this brief. The palette instead takes its cues from a calm code editor, with a separate paper-like light theme. The shell is the main interactive element; there is no fake boot sequence, typewriter delay, decorative animation, or terminal gate before the content. The three project illustrations describe the actual subjects: audio validation, property analytics, and developer tooling.
-
-Transitions answer user actions. Reduced motion is respected. Native dialogs provide keyboard dismissal and focus restoration. Client confidentiality appears beside the work instead of being hidden behind unavailable demo buttons.
+The prompt stays visible while output scrolls independently, including on mobile. There are no boot delays, fake server statistics, animations, or decorative window controls. Keyboard support includes history with draft restoration, command completion, clearing, and prompt focus. The previous card and modal design was replaced rather than recolored.

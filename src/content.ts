@@ -2,12 +2,13 @@ export const profile = {
   name: 'Santiago Maximiliano Paz Farfán',
   email: 'maximiliano.farfansp@gmail.com',
   github: 'https://github.com/MaxFSP',
+  linkedin: 'https://www.linkedin.com/in/maximiliano-paz-farf%C3%A1n-741b6b21b/',
 };
 
 export const projects = [
   {
     id: 'healthcare',
-    title: 'Making room for the big files.',
+    title: 'Healthcare audio uploads',
     category: 'Healthcare infrastructure',
     organization: 'AssureSoft · Raintree Systems',
     description: 'Batched audio uploads, serverless processing, and access controls for a healthcare platform.',
@@ -15,11 +16,11 @@ export const projects = [
     type: 'Professional work',
     summary: 'Large audio files exceeded the platform’s GraphQL request limits. I built a batched upload flow and AWS Lambda validation to check file integrity before forwarding audio to a proprietary AI model.',
     details: ['Developed AWS Lambda services for the platform.', 'Implemented role-based access control using PostgreSQL and Amazon Verified Permissions.', 'Evaluated AI-assisted development tools and built technical demos for engineers.'],
-    note: 'This work belongs to the client. Source code and production data are private. An independent recreation may be added here in the future.',
+    note: 'Source code and production data are private. A public recreation is not available yet.',
   },
   {
     id: 'real-estate',
-    title: 'From property data to better tools.',
+    title: 'Real estate applications',
     category: 'Web applications',
     organization: 'CrowdTech & Blacksheep Global',
     description: 'Responsive interfaces and serverless data flows for real estate teams.',
@@ -31,7 +32,7 @@ export const projects = [
   },
   {
     id: 'pearai',
-    title: 'A better place to write code.',
+    title: 'PearAI contributions',
     category: 'Developer tools',
     organization: 'PearAI',
     description: 'Open-source contributions across an AI code editor, backend, website, and documentation.',
@@ -53,5 +54,5 @@ export const experience = [
 export const skillGroups = [
   { title: 'Interfaces', skills: ['TypeScript', 'React', 'Next.js', 'Redux', 'Tailwind CSS', 'React Native'] },
   { title: 'Services & data', skills: ['Python', 'Node.js', 'NestJS', 'FastAPI', 'GraphQL', 'PostgreSQL', 'DynamoDB'] },
-  { title: 'Shipping', skills: ['AWS', 'Docker', 'Git', 'Linux', 'Jest', 'Vitest', 'CI/CD'] },
+  { title: 'Tools & testing', skills: ['AWS', 'Docker', 'Git', 'Linux', 'Jest', 'Vitest', 'CI/CD'] },
 ];

@@ -1,6 +1,6 @@
-# Santiago Paz Farfán — Portfolio
+# Santiago Paz Farfán — Terminal portfolio
 
-A terminal-inspired personal workspace built with React, TypeScript, and Vite. Includes a working portfolio shell, searchable command menu, light and dark themes, professional work notes, and a downloadable résumé. No backend, API keys, analytics, or external font requests are required.
+A browser-based portfolio shell built with React, TypeScript, and Vite. Black is the default. Work notes, experience, skills, and contact information are rendered as terminal output. Light mode is an explicit option. Fonts are local, and there is no backend or API-key requirement.
 
 ## Develop
 
@@ -11,7 +11,7 @@ npm ci
 npm run dev -- --port 5173 --strictPort
 ```
 
-The development server binds to `0.0.0.0` for cloud development. Use the existing checkout; each cloud task is already isolated, so no Git worktree is needed.
+The development server binds to `0.0.0.0`. Use the existing checkout; each cloud task is already isolated, so no Git worktree is needed.
 
 ## Build and validate
 
@@ -21,20 +21,29 @@ npm test
 npm run preview -- --port 4173 --strictPort
 ```
 
-`npm test` builds the production site, starts its own preview server on port 4179, and runs 14 browser checks against that production build. It covers shell commands and history, persisted themes, responsive layouts, command navigation, modal focus, mobile navigation, clipboard success and failure, résumé downloads, direct section links, and automated WCAG checks in both themes. Browser screenshots are written to ignored `test-results/`.
+`npm test` builds production assets, starts a temporary preview on port 4179, and runs 16 browser checks. These cover the pure-black default, persisted explicit themes, shell commands, directory and file handling, history and draft restoration, completion, keyboard shortcuts, clickable mobile navigation, clipboard success and failure, actual PDF downloads, direct links, scrolling, viewport sizes, and WCAG scans of both themes. Screenshots are saved to ignored `test-results/`.
 
-The tests use `/usr/bin/chromium` when available. Else install the Playwright browser with `npx playwright install chromium`, or set `CHROMIUM_PATH` to a Chromium executable. Stop any unrelated server using test port 4179 first.
+Tests use `/usr/bin/chromium` when available. Otherwise use `npx playwright install chromium`, or set `CHROMIUM_PATH` to an installed executable. Port 4179 must be available.
 
-## Add your projects
+## Commands
 
-Edit `src/content.ts` to add or update work notes. The initial professional entries describe contributions from the supplied résumé; their source code is proprietary. No recreation or live demo is presented as available. When independent recreations are ready, add their accurate descriptions and public repository or demo links.
+- `whoami` or `about`: name, background, and profile links.
+- `work` or `ls work/`: professional work and open-source contributions.
+- `work healthcare`, `work real-estate`, `work pearai`: read a work note.
+- `experience`, `skills`, `contact`, `resume`: corresponding content.
+- `ls`, `pwd`, `cd work`, `cd ..`, `cat <filename>`: navigate portfolio files.
+- `theme`, `theme dark`, `theme light`: change appearance.
+- `clear`: clear scrollback.
+- `help`: commands and clickable filenames.
 
-Profile and email live in `src/content.ts`; the LinkedIn URL lives in `src/App.tsx`. Replace `public/resume.pdf` when updating your résumé. Themes and responsive styles live in `src/styles.css`.
+Arrow keys recall command history and restore an unfinished draft. Tab completes an unambiguous command. Escape clears the input. Ctrl+L clears output when the prompt is focused; Ctrl+K or Cmd+K focuses the prompt. All content can also be opened by clicking commands and filenames. This is a portfolio command interpreter, not a server shell.
 
-## Terminal commands
+## Content
 
-`help`, `whoami`, `projects`, `experience`, `skills`, `contact`, `theme`, `clear`, and `open <section>` work in the shell. Arrow keys recall command history, and Tab completes an unambiguous command. Ctrl+K or Cmd+K opens the navigation menu. Every section is also accessible through ordinary links and buttons.
+Edit `src/content.ts` for work notes, profile links, skills, and employment history. Professional client source is private. Public recreations have not been presented as finished or available. Add accurate public repository or demo links when those projects exist.
 
-## Publish
+Replace `public/resume.pdf` when updating your résumé. The shell and command handling live in `src/App.tsx`; appearance lives in `src/styles.css`.
 
-Run `npm run build` and deploy the generated `dist/` directory to any static host. Relative asset paths support root or subdirectory hosting, including a GitHub Pages project path. The site has no server-side routing or deployment-specific secrets. Pushing to GitHub does not by itself publish a website; configure a static host separately.
+## Cloudflare
+
+Use `npm run build` as the build command and `dist` as the output directory. No runtime secrets or server-side routing are required. The user has deployed the project to Cloudflare; changes to `main` can trigger their connected deployment. Cloud deployment success must be verified separately from a local build or Git push.
