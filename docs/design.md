@@ -18,8 +18,7 @@ IBM Plex Mono is the only typeface. It is hosted locally. The entire layout uses
 ## Structure
 
 ```text
-maxfsp@portfolio: ~                            resume / theme
-run: whoami  work  experience  skills  contact  help
+>_ maxfsp  whoami work experience skills contact help  resume/theme
 -----------------------------------------------------------
 maxfsp@portfolio:~$ whoami
 
@@ -33,11 +32,12 @@ private  healthcare-audio.md    Healthcare infrastructure
 private  real-estate.md         Web applications
 public   pearai.md              Developer tools
 
+maxfsp@portfolio:~$ █                                      ↵
+
 -----------------------------------------------------------
-maxfsp@portfolio:~$ [command input]                        ↵
-↑↓ history / Tab complete / Ctrl+L clear                 help
+Tab complete / ↑↓ history / Ctrl+R search / Ctrl+L clear
 ```
 
 Names and project descriptions are factual. Project notes open inline as readable command output. Clicking the commands or filenames provides access without requiring visitors to know shell commands. Actual email, GitHub, LinkedIn, and résumé links remain normal browser links.
 
-The prompt stays visible while output scrolls independently, including on mobile. There are no boot delays, fake server statistics, animations, or decorative window controls. Keyboard support includes history with draft restoration, command completion, clearing, and prompt focus. The previous card and modal design was replaced rather than recolored.
+Commands live in the top header. The input is a prompt in the same terminal canvas, immediately after command output, without a separate panel or underline. It sticks to the bottom when output is longer than the viewport. A block cursor follows native caret movement; typing, selection, paste, horizontal scrolling, and mobile keyboards remain native. Inline suggestions favor recent commands. Tab shows ambiguous matches, Ctrl+R searches session history, and tree renders clickable portfolio files. The cursor blinks only with focus and respects reduced motion. There are no boot delays, fake server statistics, or decorative window controls.

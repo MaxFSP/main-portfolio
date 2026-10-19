@@ -54,6 +54,8 @@ test('production page is a black monospace terminal with identity and clickable 
   const { page } = await openPage(t);
   assert.match(await page.title(), /Santiago Paz Farfán/);
   assert.equal(await page.locator('h1').count(), 1);
+  assert.equal(await page.locator('header nav[aria-label="Portfolio commands"]').count(), 1);
+  assert.equal(await page.getByText('run:', { exact: true }).count(), 0);
   assert.equal(await page.locator('html').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(0, 0, 0)');
   assert.match(await page.locator('.terminal-app').evaluate(element => getComputedStyle(element).fontFamily), /IBM Plex Mono/);
   assert.ok(await page.getByRole('heading', { name: 'Santiago Paz Farfán', exact: true }).isVisible());
@@ -249,7 +251,7 @@ test('long output scrolls inside the terminal and new responses remain readable'
   await run(page, 'pwd');
   assert.ok(await lastOutput(page).isVisible());
   const outputBox = await lastOutput(page).boundingBox();
-  const inputBox = await page.locator('.input-dock').boundingBox();
+  const inputBox = await page.locator('.prompt-line').boundingBox();
   assert.ok(outputBox.y >= 0 && outputBox.y + outputBox.height <= inputBox.y, 'New output is visible above the prompt');
 });
 
@@ -264,3 +266,111 @@ for (const theme of ['dark', 'light']) {
     }
   });
 }
+
+test('inline prompt keeps native editing and a block cursor without textbox chrome', async t => {
+  const { page } = await openPage(t);
+  const input = page.getByRole('textbox', { name: 'Terminal command' });
+  await input.fill('whoami');
+  await input.press('Home');
+  await input.press('ArrowRight');
+  assert.equal(await input.evaluate(element => element.selectionStart), 1);
+  assert.equal(await page.locator('.block-cursor').textContent(), 'h');
+  await input.press('x');
+  assert.equal(await input.inputValue(), 'wxhoami');
+  await input.press('Backspace');
+  assert.equal(await input.inputValue(), 'whoami');
+  assert.equal(await input.evaluate(element => getComputedStyle(element).boxShadow), 'none');
+  assert.equal(await page.locator('.block-cursor').evaluate(element => getComputedStyle(element).animationName), 'none', 'Reduced motion stops cursor blinking');
+  await input.fill('cat ' + 'long-command-'.repeat(50) + 'é🦊');
+  await input.press('End');
+  assert.equal(await input.inputValue(), 'cat ' + 'long-command-'.repeat(50) + 'é🦊');
+  assert.ok(await input.evaluate(element => element.scrollLeft > 0), 'Long commands scroll within the native input');
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+});
+
+test('inline suggestions accept with Right Arrow without interfering with cursor editing', async t => {
+  const { page } = await openPage(t);
+  const input = page.getByRole('textbox', { name: 'Terminal command' });
+  await input.fill('exp');
+  assert.equal(await page.locator('.ghost-suggestion').textContent(), 'rience');
+  await input.press('ArrowRight');
+  assert.equal(await input.inputValue(), 'experience');
+  await input.press('Home');
+  await input.press('ArrowRight');
+  assert.equal(await input.evaluate(element => element.selectionStart), 1);
+  assert.equal(await input.inputValue(), 'experience');
+  await run(page, 'cat work/pearai.md');
+  await input.fill('cat w');
+  await input.press('ArrowRight');
+  assert.equal(await input.inputValue(), 'cat work/pearai.md', 'Recent matching history takes priority');
+});
+
+test('Tab lists ambiguous completions and keyboard selection fills without executing', async t => {
+  const { page } = await openPage(t);
+  const input = page.getByRole('textbox', { name: 'Terminal command' });
+  await input.fill('cat');
+  await input.press('Tab');
+  const options = page.getByRole('group', { name: 'Command completions' });
+  assert.ok(await options.isVisible());
+  assert.ok(await options.getByRole('button').count() > 1);
+  const entryCount = await page.locator('.transcript-entry').count();
+  await input.press('Tab');
+  assert.ok(await options.getByRole('button').first().evaluate(element => element === document.activeElement));
+  await page.keyboard.press('Enter');
+  assert.equal(await input.inputValue(), 'cat about.txt');
+  assert.equal(await page.locator('.transcript-entry').count(), entryCount);
+  assert.equal(await options.count(), 0);
+  await input.fill('cat');
+  await input.press('Tab');
+  await input.press('Escape');
+  assert.equal(await options.count(), 0);
+  assert.equal(await input.inputValue(), 'cat');
+});
+
+test('Ctrl+R searches, cycles, selects, and cancels session history', async t => {
+  const { page } = await openPage(t);
+  const input = page.getByRole('textbox', { name: 'Terminal command' });
+  await run(page, 'cat work/pearai.md');
+  await run(page, 'cat work/healthcare-audio.md');
+  await input.fill('unfinished draft');
+  await input.press('Control+r');
+  const search = page.getByRole('textbox', { name: 'Search command history' });
+  await search.fill('work/');
+  assert.match(await page.locator('.history-search').innerText(), /healthcare-audio/);
+  await search.press('Control+r');
+  assert.match(await page.locator('.history-search').innerText(), /pearai/);
+  await search.press('Enter');
+  assert.equal(await input.inputValue(), 'cat work/pearai.md');
+  assert.equal(await page.locator('.transcript-entry').count(), 4, 'Selecting history does not execute it');
+  await input.fill('keep this draft');
+  await input.press('Control+r');
+  await search.fill('missing-history-item');
+  assert.match(await page.locator('.history-search').innerText(), /No matching commands/);
+  await search.press('Escape');
+  assert.equal(await input.inputValue(), 'keep this draft');
+});
+
+test('tree renders actual portfolio files and opens notes from both directories', async t => {
+  const { page } = await openPage(t);
+  await run(page, 'tree');
+  const tree = lastOutput(page);
+  assert.match(await tree.innerText(), /1 directory, 8 files/);
+  assert.ok(await tree.getByRole('button', { name: 'about.txt', exact: true }).isVisible());
+  await tree.getByRole('button', { name: 'Read PearAI contributions', exact: true }).click();
+  assert.match(await lastOutput(page).innerText(), /PearAI contributions/);
+  await run(page, 'cd work');
+  await run(page, 'tree');
+  assert.match(await lastOutput(page).innerText(), /0 directories, 3 files/);
+  assert.equal(await lastOutput(page).getByRole('button', { name: 'about.txt', exact: true }).count(), 0);
+  await run(page, 'tree missing');
+  assert.match(await lastOutput(page).innerText(), /no such directory/);
+});
+
+test('history lists real session commands and remains available after clear', async t => {
+  const { page } = await openPage(t);
+  await run(page, 'skills');
+  await run(page, 'pwd');
+  await run(page, 'clear');
+  await run(page, 'history');
+  assert.match(await lastOutput(page).innerText(), /1  skills\n\s*2  pwd\n\s*3  clear\n\s*4  history/);
+});
