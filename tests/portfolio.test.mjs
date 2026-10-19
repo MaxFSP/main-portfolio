@@ -102,7 +102,7 @@ test('production page is a black monospace terminal with identity and clickable 
   assert.ok(
     await page.getByRole('heading', { name: 'Santiago Paz Farfán', exact: true }).isVisible(),
   );
-  assert.equal(await page.getByRole('button', { name: /^Read / }).count(), 3);
+  assert.equal(await page.getByRole('button', { name: /^Read / }).count(), 5);
   assert.match(await page.getByRole('log').innerText(), /Public recreations are not available yet/);
   const requests = await page.evaluate(() =>
     performance.getEntriesByType('resource').map((entry) => entry.name),
@@ -211,9 +211,9 @@ test('navigation and filenames read work inline without overlays', async (t) => 
   await run(page, 'work pearai');
   assert.equal(
     await lastOutput(page)
-      .getByRole('link', { name: /Public contributions/ })
+      .getByRole('link', { name: 'pearai-app ↗', exact: true })
       .getAttribute('href'),
-    'https://github.com/MaxFSP',
+    'https://github.com/MaxFSP/pearai-app',
   );
   await page.screenshot({ path: 'test-results/terminal-work.png' });
 });
@@ -513,13 +513,13 @@ test('tree renders actual portfolio files and opens notes from both directories'
   const { page } = await openPage(t);
   await run(page, 'tree');
   const tree = lastOutput(page);
-  assert.match(await tree.innerText(), /1 directory, 8 files/);
+  assert.match(await tree.innerText(), /1 directory, 10 files/);
   assert.ok(await tree.getByRole('button', { name: 'about.txt', exact: true }).isVisible());
   await tree.getByRole('button', { name: 'Read PearAI contributions', exact: true }).click();
   assert.match(await lastOutput(page).innerText(), /PearAI contributions/);
   await run(page, 'cd work');
   await run(page, 'tree');
-  assert.match(await lastOutput(page).innerText(), /0 directories, 3 files/);
+  assert.match(await lastOutput(page).innerText(), /0 directories, 5 files/);
   assert.equal(
     await lastOutput(page).getByRole('button', { name: 'about.txt', exact: true }).count(),
     0,
@@ -1152,4 +1152,88 @@ test('project split pins that note and Spanish rename controls fit a phone', asy
   await page.getByRole('button', { name: 'Guardar', exact: true }).click();
   assert.ok(await page.getByRole('tab', { name: /Investigación/ }).isVisible());
   assert.ok(await page.getByRole('combobox', { name: 'Archivo de referencia' }).isVisible());
+});
+
+test('public work links verified MaxFSP repositories and stays available in files and Spanish', async (t) => {
+  const { page } = await openPage(t);
+  await run(page, 'work');
+  const work = lastOutput(page);
+  assert.ok(
+    await work
+      .getByRole('button', { name: 'Read PearAI Linux installer', exact: true })
+      .isVisible(),
+  );
+  assert.ok(
+    await work
+      .getByRole('button', { name: 'Read A* pathfinding with UI', exact: true })
+      .isVisible(),
+  );
+  await run(page, 'work pearai');
+  const repositories = lastOutput(page).getByRole('group', { name: 'Project repositories' });
+  assert.deepEqual(
+    await repositories.getByRole('link').evaluateAll((links) => links.map((link) => link.href)),
+    [
+      'https://github.com/MaxFSP/pearai-app',
+      'https://github.com/MaxFSP/pearai-submodule',
+      'https://github.com/MaxFSP/pear-landing-page',
+      'https://github.com/MaxFSP/pearai-documentation',
+    ],
+  );
+  await run(page, 'work linux-installer');
+  assert.equal(
+    await lastOutput(page)
+      .getByRole('link', { name: 'PearAI-linux-installer ↗' })
+      .getAttribute('href'),
+    'https://github.com/MaxFSP/PearAI-linux-installer',
+  );
+  await run(page, 'work pathfinding');
+  assert.equal(
+    await lastOutput(page)
+      .getByRole('link', { name: 'A-star-pathfinding-with-UI ↗' })
+      .getAttribute('href'),
+    'https://github.com/MaxFSP/A-star-pathfinding-with-UI',
+  );
+  await page.reload();
+  assert.match(await lastOutput(page).innerText(), /Pygame/);
+  await run(page, 'less work/pathfinding.md');
+  assert.match(
+    await page.locator('.pager-content').innerText(),
+    /https:\/\/github.com\/MaxFSP\/A-star-pathfinding-with-UI/,
+  );
+  await page.getByRole('button', { name: 'Close reader' }).click();
+  await run(page, 'lang es');
+  await run(page, 'work linux-installer');
+  assert.match(await lastOutput(page).innerText(), /Instalador de PearAI para Linux/);
+  assert.equal(
+    await lastOutput(page).getByRole('link').getAttribute('href'),
+    'https://github.com/MaxFSP/PearAI-linux-installer',
+  );
+});
+
+test('header profile logos remain accessible and visible at phone widths in both languages', async (t) => {
+  const { page } = await openPage(t);
+  const header = page.locator('header');
+  const github = header.getByRole('link', { name: 'GitHub profile', exact: true });
+  const linkedin = header.getByRole('link', { name: 'LinkedIn profile', exact: true });
+  assert.equal(await github.getAttribute('href'), 'https://github.com/MaxFSP');
+  assert.equal(
+    await linkedin.getAttribute('href'),
+    'https://www.linkedin.com/in/maximiliano-paz-farf%C3%A1n-741b6b21b/',
+  );
+  assert.equal(await github.locator('svg').count(), 1);
+  assert.equal(await linkedin.locator('svg').count(), 1);
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const link of [github, linkedin]) {
+      assert.ok(await link.isVisible());
+      const box = await link.boundingBox();
+      assert.ok(box.x >= 0 && box.x + box.width <= width);
+      assert.equal(await link.getAttribute('target'), '_blank');
+      assert.match(await link.getAttribute('rel'), /noopener/);
+    }
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  }
+  await run(page, 'lang es');
+  assert.ok(await header.getByRole('link', { name: 'Perfil de GitHub' }).isVisible());
+  assert.ok(await header.getByRole('link', { name: 'Perfil de LinkedIn' }).isVisible());
 });

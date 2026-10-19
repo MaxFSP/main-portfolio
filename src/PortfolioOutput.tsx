@@ -124,9 +124,9 @@ export default function PortfolioOutput({
             {projects.map((project) => (
               <div className="file-row" key={project.id}>
                 <span className="file-permission">
-                  {project.type === 'Open source'
-                    ? t('public ', 'público')
-                    : t('private', 'privado')}
+                  {project.type === 'Professional work'
+                    ? t('private', 'privado')
+                    : t('public ', 'público')}
                 </span>
                 <button
                   className="file-link"
@@ -268,10 +268,18 @@ export default function PortfolioOutput({
           </div>
           <p className="project-stack">{project.tags.join(' / ')}</p>
           <p className="project-note">{project.note}</p>
-          {project.type === 'Open source' && (
-            <a href={profile.github} target="_blank" rel="noreferrer">
-              {t('Public contributions on GitHub ↗', 'Contribuciones públicas en GitHub ↗')}
-            </a>
+          {project.repositories && (
+            <div
+              className="repository-links"
+              role="group"
+              aria-label={t('Project repositories', 'Repositorios del proyecto')}
+            >
+              {project.repositories.map((repo) => (
+                <a key={repo.url} href={repo.url} target="_blank" rel="noopener noreferrer">
+                  {repo.label} ↗
+                </a>
+              ))}
+            </div>
           )}
         </article>
       );

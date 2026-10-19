@@ -41,7 +41,33 @@ const projectTranslations = [
       'Actualicé endpoints de autenticación.',
       'Colaboré con las compilaciones para Linux basadas en Docker.',
     ],
-    note: 'Contribuciones de código abierto de agosto de 2024 a julio de 2025. Mi historial público está disponible en GitHub.',
+    note: 'Contribuciones de código abierto de agosto de 2024 a julio de 2025. Mis repositorios de trabajo están enlazados abajo.',
+  },
+  {
+    title: 'Instalador de PearAI para Linux',
+    category: 'Herramientas para Linux',
+    description: 'Scripts para instalar, configurar y desinstalar PearAI en Linux.',
+    summary:
+      'Scripts y utilidades para configurar PearAI en Linux, con integración de escritorio y manejo de enlaces.',
+    details: [
+      'Scripts de instalación y desinstalación.',
+      'Accesos de escritorio para iniciar PearAI.',
+      'Registro del manejador de enlaces y utilidades de configuración.',
+    ],
+    note: 'Repositorio público. Los requisitos y el uso están documentados en su README.',
+  },
+  {
+    title: 'Búsqueda de rutas A* con interfaz',
+    category: 'Algoritmos y visualización',
+    description: 'Proyecto en Python y Pygame para explorar rutas en una cuadrícula.',
+    summary:
+      'Proyecto de búsqueda de rutas en una cuadrícula con una interfaz Pygame y estados visuales para explorar el algoritmo A*.',
+    details: [
+      'Las celdas representan inicio, destino, obstáculos y rutas.',
+      'Usa una cola de prioridad en la búsqueda.',
+      'El código Python y los recursos de la interfaz están disponibles en el repositorio.',
+    ],
+    note: 'Proyecto público en Python. El repositorio contiene el código y los recursos para ejecutarlo localmente.',
   },
 ];
 const jobDetails = [

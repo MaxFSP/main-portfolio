@@ -5,6 +5,8 @@ export const filenames: Record<string, string> = {
   healthcare: 'healthcare-audio.md',
   'real-estate': 'real-estate.md',
   pearai: 'pearai.md',
+  'linux-installer': 'linux-installer.md',
+  pathfinding: 'pathfinding.md',
 };
 export type PortfolioDocument = {
   path: string;
@@ -87,6 +89,9 @@ export function getDocuments(language: Language): PortfolioDocument[] {
         project.tags.join(' / '),
         '',
         project.note,
+        ...(project.repositories?.length
+          ? ['', ...project.repositories.map((repo) => repo.label + ': ' + repo.url)]
+          : []),
       ],
     })),
   ];

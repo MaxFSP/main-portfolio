@@ -8,10 +8,10 @@ export const manuals: Record<string, Manual> = {
     examples: ['whoami'],
   },
   work: {
-    synopsis: 'work [healthcare|real-estate|pearai]',
+    synopsis: 'work [healthcare|real-estate|pearai|linux-installer|pathfinding]',
     description:
-      'List my professional work and open-source contributions, or read a specific note.',
-    examples: ['work', 'work healthcare', 'work pearai'],
+      'List professional work, open-source contributions, and public projects, or read a specific note. Public notes link directly to my MaxFSP repositories.',
+    examples: ['work', 'work pearai', 'work linux-installer', 'work pathfinding'],
     notes: 'Client code is private. Independent recreations are not available yet.',
   },
   experience: {
@@ -107,7 +107,7 @@ export const manuals: Record<string, Manual> = {
       'This searches actual portfolio content in the selected language. It does not evaluate regular expressions or access external files.',
   },
   share: {
-    synopsis: 'share [healthcare|real-estate|pearai]',
+    synopsis: 'share [healthcare|real-estate|pearai|linux-installer|pathfinding]',
     description:
       'Copy a direct link to a project note. With no argument, use the last project opened in this session. The link includes the selected language and opens the correct note after reload.',
     examples: ['share healthcare', 'share pearai'],

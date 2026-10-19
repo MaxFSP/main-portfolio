@@ -195,6 +195,39 @@ h3 {
   padding: 0;
   font-size: 11px;
 }
+.profile-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.window-actions .profile-icon {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 30px;
+  height: 34px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.window-actions .profile-icon:hover {
+  color: var(--bright);
+  background: var(--hover);
+}
+.profile-icon svg {
+  width: 17px;
+  height: 17px;
+}
+.repository-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 12px;
+}
+.repository-links a {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
 .theme-picker {
   background: var(--bg);
   border: 1px solid var(--line);
@@ -1660,10 +1693,22 @@ textarea:focus-visible {
 }
 @media (max-width: 600px) {
   .window-actions {
-    gap: 9px;
+    gap: 6px;
   }
-  .window-actions > a {
+  .window-actions > .header-resume {
     display: none;
+  }
+  .window-bar {
+    padding-left: 12px;
+    padding-right: 12px;
+    column-gap: 8px;
+  }
+  .theme-picker {
+    width: 92px;
+  }
+  .window-actions .profile-icon {
+    width: 28px;
+    height: 30px;
   }
   .session-bar {
     padding: 0 12px;

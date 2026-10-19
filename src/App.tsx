@@ -7,6 +7,7 @@ import Pager from './components/Pager';
 import ReferencePane from './components/ReferencePane';
 import Snake from './components/Snake';
 import SessionTabs from './components/SessionTabs';
+import ProfileLinks from './components/ProfileLinks';
 import { useSessions } from './hooks/useSessions';
 import type { Entry, View } from './hooks/useSessions';
 import { filenames, getDocuments, resolveDocument, tokenize } from './documents';
@@ -47,9 +48,7 @@ const completionOptions = [
   'tab rename ',
   'lang en',
   'lang es',
-  'share healthcare',
-  'share real-estate',
-  'share pearai',
+  ...Object.keys(filenames).map((id) => 'share ' + id),
   'grep ',
   'man',
   ...Object.keys(manuals).map((command) => 'man ' + command),
@@ -507,7 +506,7 @@ function App() {
         (item) => item.id === candidate || filenames[item.id].replace('.md', '') === candidate,
       );
       if (!project) {
-        append(command, 'text', 'Usage: share [healthcare|real-estate|pearai]');
+        append(command, 'text', 'Usage: share [' + Object.keys(filenames).join('|') + ']');
         return;
       }
       const url = new URL(window.location.pathname, window.location.origin);
@@ -894,6 +893,7 @@ function App() {
         </nav>
         <div className="window-actions">
           <a
+            className="header-resume"
             href={resumeUrl}
             download="Santiago-Paz-Farfan-Resume.pdf"
             aria-label={t('Download résumé', 'Descargar currículum')}
@@ -924,6 +924,7 @@ function App() {
               </option>
             ))}
           </select>
+          <ProfileLinks language={language} />
         </div>
       </header>
       <SessionTabs

@@ -5,7 +5,21 @@ export const profile = {
   linkedin: 'https://www.linkedin.com/in/maximiliano-paz-farf%C3%A1n-741b6b21b/',
 };
 
-export const projects = [
+type Project = {
+  id: string;
+  title: string;
+  category: string;
+  organization: string;
+  description: string;
+  tags: string[];
+  type: 'Professional work' | 'Open source' | 'Public project';
+  summary: string;
+  details: string[];
+  note: string;
+  repositories?: { label: string; url: string }[];
+};
+
+export const projects: Project[] = [
   {
     id: 'healthcare',
     title: 'Healthcare audio uploads',
@@ -57,7 +71,56 @@ export const projects = [
       'Updated authentication endpoints.',
       'Supported Docker-based Linux builds.',
     ],
-    note: 'Open-source contributions from August 2024 to July 2025. Explore my GitHub profile for my public contribution history.',
+    note: 'Open-source contributions from August 2024 to July 2025. My working repositories are linked below.',
+    repositories: [
+      { label: 'pearai-app', url: 'https://github.com/MaxFSP/pearai-app' },
+      { label: 'pearai-submodule', url: 'https://github.com/MaxFSP/pearai-submodule' },
+      { label: 'pear-landing-page', url: 'https://github.com/MaxFSP/pear-landing-page' },
+      { label: 'pearai-documentation', url: 'https://github.com/MaxFSP/pearai-documentation' },
+    ],
+  },
+  {
+    id: 'linux-installer',
+    title: 'PearAI Linux installer',
+    category: 'Linux tooling',
+    organization: 'MaxFSP / PearAI-linux-installer',
+    description: 'Shell scripts for installing, configuring, and removing PearAI on Linux.',
+    tags: ['Bash', 'Linux'],
+    type: 'Public project',
+    summary:
+      'Installation scripts and utilities for setting up PearAI on Linux, with desktop integration and URL handling.',
+    details: [
+      'Installation and uninstallation scripts.',
+      'Desktop entries for launching PearAI.',
+      'URL handler registration and configuration utilities.',
+    ],
+    note: 'Public repository. Setup requirements and usage are documented in its README.',
+    repositories: [
+      { label: 'PearAI-linux-installer', url: 'https://github.com/MaxFSP/PearAI-linux-installer' },
+    ],
+  },
+  {
+    id: 'pathfinding',
+    title: 'A* pathfinding with UI',
+    category: 'Algorithms & visualization',
+    organization: 'MaxFSP / A-star-pathfinding-with-UI',
+    description: 'A Python and Pygame project for exploring grid-based pathfinding.',
+    tags: ['Python', 'Pygame', 'A*'],
+    type: 'Public project',
+    summary:
+      'A grid-based pathfinding project with a Pygame interface and visual states for exploring the A* algorithm.',
+    details: [
+      'Grid cells represent start, end, barriers, and path states.',
+      'Uses a priority queue for the pathfinding search.',
+      'Python source and UI assets are available in the repository.',
+    ],
+    note: 'Public Python project. The repository contains the source and assets for running it locally.',
+    repositories: [
+      {
+        label: 'A-star-pathfinding-with-UI',
+        url: 'https://github.com/MaxFSP/A-star-pathfinding-with-UI',
+      },
+    ],
   },
 ];
 
