@@ -61,3 +61,9 @@ Split mode pins a searchable portfolio file beside the terminal so visitors can 
 Text spacing is tighter: fewer blank lines between commands, smaller margins in work notes, and more compact leading. New output follows the prompt on resize while a reader who scrolls back keeps their place.
 
 CRT now has live presets and separate scanline/glow strengths. Explicit presets can affect Black without changing its palette; Light and Paper stay clean. Effects remain static and ignore pointer input. There are no flicker effects.
+
+## Visitor introduction and evidence
+
+Start here remains inside the terminal window. A numbered four-step sequence covers background, selected work, contributions, and contact. Numbering encodes the actual sequence. The existing black/white/gray palette, IBM Plex Mono, and optional CRT palettes stay in place. The walkthrough uses plain text, inline links, and a scrollable reading pane, with fixed Back/Next controls. No automatic progression or entry animation is added.
+
+Project notes show context, my work, and a qualitative result where supported. Contribution highlights link to upstream PRs, with the complete reviewed list expandable. Open proposals retain their actual state. The separate commit history explains that merges and rewritten records are not extra features. Mapped skills link to examples, distinguishing professional experience from publicly verifiable merged work. Public-source details and review gaps are recorded in pearai-contributions.md.

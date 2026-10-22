@@ -11,6 +11,8 @@ import ManualPage from './components/ManualPage';
 import CrtControls from './components/CrtControls';
 import GrepOutput from './components/GrepOutput';
 import ShareOutput from './components/ShareOutput';
+import ContributionsOutput from './components/ContributionsOutput';
+import SkillsOutput from './components/SkillsOutput';
 const resumeUrl = import.meta.env.BASE_URL + 'resume.pdf';
 const ascii = [
   '   _____ ____  ______',
@@ -31,6 +33,7 @@ type Props = {
   copied: boolean;
   copyError: boolean;
   copyProjectLink: (entry: Entry) => void;
+  compactContributions?: boolean;
 };
 
 export default function PortfolioOutput({
@@ -45,8 +48,9 @@ export default function PortfolioOutput({
   copied,
   copyError,
   copyProjectLink,
+  compactContributions = false,
 }: Props) {
-  const { projects, experience, skillGroups } = getContent(language);
+  const { projects, experience } = getContent(language);
   const t = (en: string, es: string) => text(language, en, es);
   const crtEffects = crtSettings.enabled;
   const setCrtEffects = (value: SetStateAction<boolean>) =>
@@ -98,6 +102,11 @@ export default function PortfolioOutput({
               </div>
             </dl>
             <div className="identity-links">
+              {!compactContributions && (
+                <button className="file-link start-link" onClick={() => run('start')}>
+                  {t('Start here', 'Empieza aquí')}
+                </button>
+              )}
               <a href={profile.github} target="_blank" rel="noreferrer">
                 github ↗
               </a>
@@ -190,16 +199,14 @@ export default function PortfolioOutput({
         </div>
       );
     case 'skills':
+      return <SkillsOutput language={language} selected={entry.message} run={run} />;
+    case 'contributions':
       return (
-        <div className="skills-output">
-          <h2>{t('Skills', 'Habilidades')}</h2>
-          {skillGroups.map((group) => (
-            <div className="skill-row" key={group.title}>
-              <h3>{group.title}</h3>
-              <p>{group.skills.join(', ')}</p>
-            </div>
-          ))}
-        </div>
+        <ContributionsOutput
+          language={language}
+          compact={compactContributions}
+          filter={entry.message}
+        />
       );
     case 'contact':
       return (
@@ -255,12 +262,20 @@ export default function PortfolioOutput({
           <p className="output-comment">{'# ' + filenames[project.id]}</p>
           <h2>{project.title}</h2>
           <p className="project-organization">{project.organization}</p>
+          <h3 className="case-heading">{t('Context', 'Contexto')}</h3>
           <p>{project.summary}</p>
+          <h3 className="case-heading">{t('My work', 'Mi trabajo')}</h3>
           <ul>
             {project.details.map((detail) => (
               <li key={detail}>{detail}</li>
             ))}
           </ul>
+          {project.outcome && (
+            <>
+              <h3 className="case-heading">{t('Result', 'Resultado')}</h3>
+              <p>{project.outcome}</p>
+            </>
+          )}
           <div className="project-tools">
             {commandButton('less work/' + filenames[project.id], '[ less ]')}
             {commandButton('share ' + project.id, '[ share ]')}
@@ -268,6 +283,14 @@ export default function PortfolioOutput({
           </div>
           <p className="project-stack">{project.tags.join(' / ')}</p>
           <p className="project-note">{project.note}</p>
+          {project.id === 'pearai' && (
+            <div className="project-evidence">
+              <ContributionsOutput language={language} compact />
+              <button className="file-link" onClick={() => run('contributions')}>
+                {t('All verified contributions', 'Todas las contribuciones verificadas')}
+              </button>
+            </div>
+          )}
           {project.repositories && (
             <div
               className="repository-links"
@@ -421,6 +444,12 @@ export default function PortfolioOutput({
           <h2>{t('Commands', 'Comandos')}</h2>
           <div className="help-grid">
             {[
+              ['start', 'A guided introduction to my work', 'Un recorrido por mi trabajo'],
+              [
+                'contributions',
+                'Verified PearAI pull requests',
+                'Pull requests verificados de PearAI',
+              ],
               ['whoami', 'Name, location, and background', 'Nombre, ubicación y trayectoria'],
               [
                 'work',

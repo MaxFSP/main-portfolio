@@ -2,6 +2,22 @@ import type { Language } from './localization';
 type Manual = { synopsis: string; description: string; examples: string[]; notes?: string };
 
 export const manuals: Record<string, Manual> = {
+  start: {
+    synopsis: 'start',
+    description:
+      'Open a four-step introduction: background, selected work, verified contributions, and contact. Use the numbered steps, Back, or Next. Escape returns to the terminal.',
+    examples: ['start'],
+    notes:
+      'The Start here button opens the same walkthrough. Each shell keeps its own step while open. The tour alias also works. There are no automatic transitions.',
+  },
+  contributions: {
+    synopsis: 'contributions [all|merged|open|closed]',
+    description:
+      'Read verified PearAI contributions with upstream pull request links. Highlights show merged work; the full record includes the open proposal with its actual status. Commit history is listed separately.',
+    examples: ['contributions', 'contributions merged', 'contributions open'],
+    notes:
+      'This is a reviewed snapshot dated 2026-10-22. It covers public authored PRs and linked commit history, not private work or every comment/review.',
+  },
   whoami: {
     synopsis: 'whoami',
     description: 'Show my name, background, location, and profile links.',
@@ -20,9 +36,10 @@ export const manuals: Record<string, Manual> = {
     examples: ['experience'],
   },
   skills: {
-    synopsis: 'skills',
-    description: 'List languages, frameworks, infrastructure, and testing tools from my résumé.',
-    examples: ['skills'],
+    synopsis: 'skills [name]',
+    description:
+      'List skills from my résumé. Select an underlined skill or name it to see project examples and linked merged contributions where available.',
+    examples: ['skills', 'skills React', 'skills Python', 'skills AWS'],
   },
   contact: {
     synopsis: 'contact',
@@ -179,6 +196,18 @@ export const manuals: Record<string, Manual> = {
 };
 
 const spanish: Record<string, Partial<Manual>> = {
+  start: {
+    description:
+      'Abre un recorrido de cuatro pasos: perfil, trabajo seleccionado, contribuciones verificadas y contacto. Usa los pasos, Atrás o Siguiente. Escape vuelve al terminal.',
+    notes:
+      'Empieza aquí abre el mismo recorrido. Cada sesión conserva su paso mientras está abierto. También funciona tour. No hay avances automáticos.',
+  },
+  contributions: {
+    description:
+      'Muestra contribuciones verificadas a PearAI con enlaces a los pull requests originales. Los destacados son cambios integrados; el registro incluye la propuesta abierta con su estado real. Los commits se muestran por separado.',
+    notes:
+      'Revisión pública del 22 de octubre de 2026. No incluye trabajo privado ni todos los comentarios o revisiones.',
+  },
   whoami: { description: 'Muestra mi nombre, trayectoria, ubicación y enlaces de perfil.' },
   work: {
     description:
@@ -189,7 +218,7 @@ const spanish: Record<string, Partial<Manual>> = {
   experience: { description: 'Muestra mi experiencia laboral, responsabilidades y educación.' },
   skills: {
     description:
-      'Lista lenguajes, frameworks, infraestructura y herramientas de pruebas de mi currículum.',
+      'Lista habilidades del currículum. Selecciona una subrayada o escribe su nombre para ver proyectos y contribuciones integradas cuando estén disponibles.',
   },
   contact: {
     description:

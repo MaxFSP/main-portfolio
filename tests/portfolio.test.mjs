@@ -1237,3 +1237,186 @@ test('header profile logos remain accessible and visible at phone widths in both
   assert.ok(await header.getByRole('link', { name: 'Perfil de GitHub' }).isVisible());
   assert.ok(await header.getByRole('link', { name: 'Perfil de LinkedIn' }).isVisible());
 });
+
+test('Start here guides through background, work, evidence, and contact without typing', async (t) => {
+  const { page } = await openPage(t);
+  await page.locator('header').getByRole('button', { name: 'Start here', exact: true }).click();
+  const tour = page.getByRole('main', { name: 'Portfolio walkthrough' });
+  assert.ok(await tour.isVisible());
+  assert.match(await tour.innerText(), /No terminal knowledge needed/);
+  assert.equal(await tour.getByRole('button', { name: 'Back', exact: true }).isDisabled(), true);
+  await tour.getByRole('button', { name: /^Next/ }).click();
+  assert.equal(await tour.getByRole('button', { name: /^Read case study/ }).count(), 3);
+  await tour.getByRole('button', { name: /^Next/ }).click();
+  assert.match(await tour.innerText(), /15 merged PRs \/ 1 open proposal/);
+  assert.equal(await tour.locator('.contribution-row').count(), 4);
+  assert.ok(await tour.getByRole('link', { name: /Linux download/ }).isVisible());
+  await tour.getByRole('button', { name: /^Next/ }).click();
+  assert.equal(
+    await tour.getByRole('link', { name: '[ send email ]', exact: true }).getAttribute('href'),
+    'mailto:' + profileEmail(),
+  );
+  assert.ok(await tour.getByRole('link', { name: 'Download résumé ↓', exact: true }).isVisible());
+  await tour.getByRole('button', { name: 'Back', exact: true }).click();
+  assert.equal(
+    await tour
+      .getByRole('navigation', { name: 'Walkthrough steps' })
+      .locator('button[aria-current="step"]')
+      .innerText(),
+    '3. Contributions',
+  );
+  await page.keyboard.press('Escape');
+  assert.equal(await tour.count(), 0);
+  await page.waitForFunction(() => document.activeElement?.id === 'command-input');
+  await run(page, 'history');
+  assert.match(await lastOutput(page).innerText(), /start/);
+});
+
+test('walkthrough preserves per-shell steps and can open a real case study or full evidence', async (t) => {
+  const { page } = await openPage(t);
+  await run(page, 'start');
+  let tour = page.getByRole('main', { name: 'Portfolio walkthrough' });
+  await tour.getByRole('button', { name: 'Selected work', exact: true }).click();
+  await page.getByRole('button', { name: 'New terminal session' }).click();
+  assert.equal(await tour.count(), 0);
+  await run(page, 'tour');
+  await tour.getByRole('button', { name: 'Get in touch', exact: true }).click();
+  await page.getByRole('tab', { name: /shell 1/ }).click();
+  assert.equal(await tour.locator('button[aria-current="step"]').innerText(), '2. Selected work');
+  await tour
+    .getByRole('button', { name: 'Read case study / Healthcare audio uploads', exact: true })
+    .click();
+  assert.equal(await tour.count(), 0);
+  assert.match(await lastOutput(page).innerText(), /Context[\s\S]*My work[\s\S]*Result/);
+  assert.match(await lastOutput(page).innerText(), /integrity validation/);
+  await run(page, 'start');
+  await tour.getByRole('button', { name: 'Contributions', exact: true }).click();
+  await tour.getByRole('button', { name: 'Browse the complete verified record' }).click();
+  assert.match(await lastOutput(page).innerText(), /PearAI \/ contribution evidence/);
+});
+
+test('contribution archive exposes all verified statuses and separate attributed commit history', async (t) => {
+  const { page } = await openPage(t);
+  await run(page, 'contributions');
+  let output = lastOutput(page);
+  await output.getByText('All verified pull requests (16)', { exact: true }).click();
+  const archive = output.locator('.contribution-archive').first();
+  assert.equal(await archive.locator('.contribution-row').count(), 16);
+  assert.equal(await archive.locator('.state-merged').count(), 15);
+  assert.equal(await archive.locator('.state-open').count(), 1);
+  assert.equal(
+    await archive.getByRole('link', { name: /Add issue tracking page/ }).getAttribute('href'),
+    'https://github.com/trypear/pear-landing-page/pull/358',
+  );
+  await output.getByText('Commit history attributed to MaxFSP (34)', { exact: true }).click();
+  assert.equal(await output.locator('.commit-history li').count(), 34);
+  assert.match(
+    await output.locator('.commit-history').innerText(),
+    /Shortcut change to resize chat/,
+  );
+  assert.match(
+    await output.locator('.commit-history').innerText(),
+    /Removed hard coded supabase keys/,
+  );
+  await run(page, 'contributions open');
+  assert.match(await lastOutput(page).innerText(), /Proposed a known-issues page/);
+  assert.equal(
+    await lastOutput(page).locator('.contributions-output > .contribution-row').count(),
+    1,
+  );
+  assert.equal(await lastOutput(page).locator('.state-merged').count(), 0);
+  await run(page, 'contributions closed');
+  await lastOutput(page).getByText('All verified pull requests (0)', { exact: true }).click();
+  assert.match(await lastOutput(page).innerText(), /No pull requests in this state/);
+  await run(page, 'contributions invalid');
+  assert.match(await lastOutput(page).innerText(), /Usage: contributions/);
+});
+
+test('contribution links survive direct loading and file search, with localized summaries', async (t) => {
+  const { page } = await openPage(t);
+  await page.goto(url + '/#contributions');
+  assert.match(await lastOutput(page).innerText(), /15 merged PRs/);
+  await run(page, 'grep -i workspace work/pearai.md');
+  assert.match(await lastOutput(page).innerText(), /workspace/);
+  await run(page, 'less work/pearai.md');
+  assert.match(
+    await page.locator('.pager-content').innerText(),
+    /https:\/\/github.com\/trypear\/pearai-submodule\/pull\/129/,
+  );
+  await page.getByRole('button', { name: 'Close reader' }).click();
+  await run(page, 'lang es');
+  await run(page, 'contributions open');
+  assert.match(await lastOutput(page).innerText(), /propuesta abierta/);
+  assert.match(await lastOutput(page).innerText(), /Propuse una página/);
+  await run(page, 'man start');
+  assert.match(await lastOutput(page).innerText(), /recorrido de cuatro pasos/);
+});
+
+test('skills connect to project examples and distinguish professional experience from merged PR evidence', async (t) => {
+  const { page } = await openPage(t);
+  await run(page, 'skills');
+  await lastOutput(page).getByRole('button', { name: 'React', exact: true }).click();
+  let output = lastOutput(page);
+  assert.match(await output.innerText(), /Skills \/ React/);
+  assert.ok(
+    await output.getByRole('button', { name: 'Real estate applications', exact: true }).isVisible(),
+  );
+  assert.ok(await output.getByRole('link', { name: /pear-landing-page #346/ }).isVisible());
+  assert.equal(
+    await output.getByRole('link', { name: /#358/ }).count(),
+    0,
+    'Open proposal is not used as merged evidence',
+  );
+  await run(page, 'skills AWS');
+  assert.match(await lastOutput(page).innerText(), /Professional experience \/ résumé/);
+  assert.equal(await lastOutput(page).getByRole('link').count(), 0);
+  await run(page, 'skills Python');
+  await lastOutput(page)
+    .getByRole('button', { name: 'A* pathfinding with UI', exact: true })
+    .click();
+  assert.match(await lastOutput(page).innerText(), /Pygame/);
+  await run(page, 'skills imaginary');
+  assert.match(await lastOutput(page).innerText(), /No linked examples/);
+});
+
+test('Spanish walkthrough fits phones and short panes, supports keyboard exit, and passes accessibility checks', async (t) => {
+  const { page } = await openPage(t, { viewport: { width: 390, height: 720 } });
+  await run(page, 'lang es');
+  await page.locator('header').getByRole('button', { name: 'Empieza aquí', exact: true }).click();
+  const tour = page.getByRole('main', { name: 'Recorrido del portafolio' });
+  for (const [width, height] of [
+    [320, 640],
+    [390, 420],
+    [768, 720],
+  ]) {
+    await page.setViewportSize({ width, height });
+    assert.ok(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <= innerWidth &&
+          document.documentElement.scrollHeight <= innerHeight,
+      ),
+    );
+    const control = await tour.getByRole('button', { name: /^Siguiente/ }).boundingBox();
+    assert.ok(control.y + control.height <= height);
+  }
+  const check = async () =>
+    assert.deepEqual(
+      (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+        .violations,
+      [],
+    );
+  await check();
+  await tour.getByRole('button', { name: 'Contribuciones', exact: true }).click();
+  await check();
+  await page.getByRole('combobox', { name: 'Tema del terminal' }).selectOption('light');
+  await check();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.activeElement?.id === 'command-input');
+  await run(page, 'contributions');
+  await lastOutput(page)
+    .getByText('Todos los pull requests verificados (16)', { exact: true })
+    .click();
+  await check();
+  await page.screenshot({ path: 'test-results/contributions-es.png' });
+});

@@ -16,6 +16,8 @@ const projectTranslations = [
       'Evalué herramientas de desarrollo asistido por IA y creé demostraciones técnicas para el equipo.',
     ],
     note: 'El código y los datos de producción son privados. Todavía no hay una recreación pública disponible.',
+    outcome:
+      'Entregué un flujo de carga por lotes con validación de integridad antes de enviar el audio al procesamiento de IA.',
   },
   {
     title: 'Aplicaciones para el sector inmobiliario',
@@ -29,19 +31,24 @@ const projectTranslations = [
       'En Blacksheep Global desarrollé un backend sin servidor con GraphQL, AWS Lambda y DynamoDB para análisis inmobiliario.',
     ],
     note: 'Son experiencias profesionales distintas. Las aplicaciones y su código pertenecen a los clientes; estas notas describen únicamente mis contribuciones.',
+    outcome:
+      'Entregué interfaces web, flujos de despliegue y servicios de datos sin servidor en estas experiencias inmobiliarias separadas.',
   },
   {
     title: 'Contribuciones a PearAI',
     category: 'Herramientas de desarrollo',
     description: 'Contribuciones de código abierto al editor, backend, sitio web y documentación.',
     summary:
-      'Contribuí al editor de escritorio, backend, sitio web y documentación de PearAI para la versión 1.0.0.',
+      'Contribuí al editor, extensión, sitio web y documentación de PearAI: lanzamiento de v1, descargas para Linux, comportamiento del chat e interfaces adaptables.',
     details: [
-      'Corregí atajos de teclado del chatbot y problemas de interfaz.',
-      'Actualicé endpoints de autenticación.',
-      'Colaboré con las compilaciones para Linux basadas en Docker.',
+      'Preparé el sitio para v1, eliminando restricciones de espera y actualizando descargas, precios y navegación móvil.',
+      'Añadí descargas y guías para Linux, incluyendo procesadores antiguos y NixOS.',
+      'Corregí la interfaz de nueva ventana, el chat según el espacio de trabajo y la distribución de la extensión.',
+      'Corregí la documentación de atajos y adapté los videos de documentación a móviles.',
     ],
-    note: 'Contribuciones de código abierto de agosto de 2024 a julio de 2025. Mis repositorios de trabajo están enlazados abajo.',
+    note: 'El currículum abarca mi colaboración de agosto de 2024 a julio de 2025. Esta revisión pública se realizó el 22 de octubre de 2026.',
+    outcome:
+      'Se integraron cambios en cuatro repositorios originales. La página de problemas conocidos sigue como propuesta abierta y se muestra por separado.',
   },
   {
     title: 'Instalador de PearAI para Linux',

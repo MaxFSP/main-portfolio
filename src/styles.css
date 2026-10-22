@@ -1779,3 +1779,205 @@ textarea:focus-visible {
 :root:is([data-theme='amber'], [data-theme='phosphor']) .reader-number {
   font-size: 16px;
 }
+
+/* Guided reading and contribution evidence */
+.command-nav .start-button {
+  color: var(--bright);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.identity-links .start-link {
+  color: var(--bright);
+}
+.case-heading {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  margin: 17px 0 5px;
+}
+.project-evidence {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+  margin: 22px 0;
+}
+.contributions-output {
+  max-width: 80ch;
+}
+.contribution-row {
+  margin: 19px 0;
+}
+.contribution-meta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.contribution-state {
+  color: var(--text);
+}
+.contribution-row h3 {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 5px 0;
+}
+.contribution-row p {
+  font-size: 12px;
+  margin: 5px 0;
+}
+.contribution-row .output-comment {
+  font-size: 10px;
+}
+.contribution-archive {
+  margin: 18px 0;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.contribution-archive summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--bright);
+  padding: 5px 0;
+}
+.commit-history {
+  list-style: none;
+  padding: 0;
+}
+.commit-history li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 14px 0;
+  font-size: 11px;
+}
+.commit-history a,
+.contribution-row a {
+  overflow-wrap: anywhere;
+}
+.skill-example {
+  margin: 18px 0;
+}
+.skill-example h3 {
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+.skill-example p {
+  margin: 5px 0;
+  font-size: 12px;
+}
+.skill-proof {
+  margin: 22px 0;
+  font-size: 12px;
+}
+.skill-proof a {
+  overflow-wrap: anywhere;
+}
+.skill-row .file-link {
+  font-size: inherit;
+}
+.tour-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.tour-steps {
+  display: flex;
+  gap: 6px 20px;
+  flex-wrap: wrap;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+}
+.tour-steps button {
+  color: var(--muted);
+  padding: 4px 0;
+  text-align: left;
+}
+.tour-steps button[aria-current='step'] {
+  color: var(--bright);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.tour-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px 32px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) var(--bg);
+}
+.tour-heading {
+  font-size: 17px;
+  margin: 0 0 16px;
+}
+.tour-heading:focus {
+  outline: none;
+}
+.tour-intro {
+  max-width: 73ch;
+  margin-bottom: 24px;
+}
+.tour-content .identity {
+  margin-top: 18px;
+}
+.tour-work {
+  max-width: 76ch;
+}
+.tour-work article {
+  margin-bottom: 24px;
+}
+.tour-work h3 {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.tour-work p {
+  font-size: 12px;
+  margin: 5px 0 9px;
+}
+.tour-work .file-link {
+  font-size: 11px;
+}
+.tour-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 46px;
+  padding: 8px 24px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+}
+.tour-controls button {
+  min-height: 30px;
+}
+.tour-controls > span {
+  color: var(--muted);
+}
+.tour-resume {
+  display: inline-flex;
+  margin-top: 20px;
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .tour-content {
+    padding: 18px 20px;
+  }
+  .tour-steps {
+    padding: 8px 20px;
+    gap: 5px 18px;
+  }
+  .tour-content .identity {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .tour-controls {
+    padding: 8px 20px;
+  }
+  .identity-links {
+    flex-wrap: wrap;
+  }
+}

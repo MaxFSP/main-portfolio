@@ -1,5 +1,6 @@
 import { getContent } from './localization';
 import type { Language } from './localization';
+import { contributions } from './contributions';
 
 export const filenames: Record<string, string> = {
   healthcare: 'healthcare-audio.md',
@@ -85,12 +86,35 @@ export function getDocuments(language: Language): PortfolioDocument[] {
         project.summary,
         '',
         ...project.details.map((detail) => '- ' + detail),
+        ...(project.outcome ? ['', es ? '# Resultado' : '# Result', project.outcome] : []),
         '',
         project.tags.join(' / '),
         '',
         project.note,
         ...(project.repositories?.length
           ? ['', ...project.repositories.map((repo) => repo.label + ': ' + repo.url)]
+          : []),
+        ...(project.id === 'pearai'
+          ? [
+              '',
+              es ? '# Contribuciones verificadas' : '# Verified contributions',
+              ...contributions.flatMap((item) => [
+                item.repo +
+                  ' #' +
+                  item.number +
+                  ' / ' +
+                  (item.status === 'merged'
+                    ? es
+                      ? 'integrado'
+                      : 'merged'
+                    : es
+                      ? 'propuesta abierta'
+                      : 'open proposal'),
+                es ? item.summaryEs : item.summary,
+                item.url,
+                '',
+              ]),
+            ]
           : []),
       ],
     })),

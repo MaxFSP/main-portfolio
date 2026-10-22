@@ -16,6 +16,7 @@ type Project = {
   summary: string;
   details: string[];
   note: string;
+  outcome?: string;
   repositories?: { label: string; url: string }[];
 };
 
@@ -37,6 +38,8 @@ export const projects: Project[] = [
       'Evaluated AI-assisted development tools and built technical demos for engineers.',
     ],
     note: 'Source code and production data are private. A public recreation is not available yet.',
+    outcome:
+      'Delivered a batched upload flow with integrity validation before audio was forwarded for AI processing.',
   },
   {
     id: 'real-estate',
@@ -54,6 +57,8 @@ export const projects: Project[] = [
       'At Blacksheep Global, built a serverless backend with GraphQL, AWS Lambda, and DynamoDB for real estate analytics.',
     ],
     note: 'These are separate professional engagements. Client applications and source code are proprietary; the descriptions share only the scope of my contributions.',
+    outcome:
+      'Delivered web interfaces, release workflows, and serverless data flows across these separate real estate engagements.',
   },
   {
     id: 'pearai',
@@ -62,16 +67,19 @@ export const projects: Project[] = [
     organization: 'PearAI',
     description:
       'Open-source contributions across an AI code editor, backend, website, and documentation.',
-    tags: ['React', 'Electron', 'FastAPI'],
+    tags: ['TypeScript', 'React', 'Electron', 'Linux'],
     type: 'Open source',
     summary:
-      'Contributed to PearAI across its desktop app, backend, website, and documentation repositories in support of the 1.0.0 release.',
+      'Contributed to PearAI’s editor, extension, website, and documentation, including v1 launch preparation, Linux downloads, chat behavior, and responsive interfaces.',
     details: [
-      'Fixed chatbot keyboard shortcuts and interface issues.',
-      'Updated authentication endpoints.',
-      'Supported Docker-based Linux builds.',
+      'Prepared the v1 website by removing waitlist gating and updating downloads, pricing, and mobile navigation.',
+      'Added Linux downloads and installation guidance, including older-CPU support and NixOS instructions.',
+      'Fixed new-window visuals, workspace-aware chat behavior, and extension layouts.',
+      'Corrected chat shortcut documentation and made documentation videos responsive on mobile.',
     ],
-    note: 'Open-source contributions from August 2024 to July 2025. My working repositories are linked below.',
+    note: 'The résumé covers my August 2024–July 2025 engagement. The public contribution snapshot below was reviewed on October 22, 2026.',
+    outcome:
+      'Changes were merged across four upstream repositories. The known-issues page remains an open proposal and is listed separately.',
     repositories: [
       { label: 'pearai-app', url: 'https://github.com/MaxFSP/pearai-app' },
       { label: 'pearai-submodule', url: 'https://github.com/MaxFSP/pearai-submodule' },

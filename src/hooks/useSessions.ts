@@ -19,6 +19,7 @@ export type View =
   | 'grep'
   | 'share'
   | 'crt'
+  | 'contributions'
   | 'text';
 export type Entry = {
   id: number;
@@ -30,7 +31,11 @@ export type Entry = {
   search?: SearchRequest;
   copyStatus?: 'copied' | 'failed';
 };
-export type Mode = { type: 'pager'; path: string } | { type: 'snake' } | null;
+export type Mode =
+  | { type: 'pager'; path: string }
+  | { type: 'snake' }
+  | { type: 'tour'; step: number }
+  | null;
 export type Session = {
   id: number;
   name: string;

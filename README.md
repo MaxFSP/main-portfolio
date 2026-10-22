@@ -21,16 +21,19 @@ npm test
 npm run preview -- --port 4173 --strictPort
 ```
 
-`npm test` builds production assets, starts a temporary preview on port 4179, and runs 50 browser checks. These cover the pure-black default, all five persisted themes and optional CRT effects, shell commands, directory and file handling, history and draft restoration, completion, inline suggestions, reverse history search, native text editing, file-tree navigation, keyboard shortcuts, clickable mobile navigation, clipboard success and failure, actual PDF downloads, direct links, scrolling, viewport sizes, command manuals, last-command expansion, file reading and search, independent sessions, shared links, Spanish content, real hash verification and failure handling, Snake gameplay, live CRT controls, and WCAG scans of all five themes and the new interfaces. Screenshots are saved to ignored `test-results/`.
+`npm test` builds production assets, starts a temporary preview on port 4179, and runs 56 browser checks. These cover the pure-black default, all five persisted themes and optional CRT effects, shell commands, directory and file handling, history and draft restoration, completion, inline suggestions, reverse history search, native text editing, file-tree navigation, keyboard shortcuts, clickable mobile navigation, clipboard success and failure, actual PDF downloads, direct links, scrolling, viewport sizes, command manuals, last-command expansion, file reading and search, independent sessions, shared links, Spanish content, real hash verification and failure handling, Snake gameplay, live CRT controls, and WCAG scans of all five themes and the new interfaces. Screenshots are saved to ignored `test-results/`.
 
 Tests use `/usr/bin/chromium` when available. Otherwise use `npx playwright install chromium`, or set `CHROMIUM_PATH` to an installed executable. Port 4179 must be available.
 
 ## Commands
 
+- `start` (or `tour`): open the four-step Start here walkthrough: background, selected case studies, verified PearAI work, and contact. Use Back/Next or select a step; Escape returns to the terminal. Each shell keeps its own open step.
+- `contributions [all|merged|open|closed]`: browse the reviewed PearAI record. Four merged highlights lead to all 16 verified authored PRs and a separately labelled 34-record attributed commit history. Review scope, sources, and gaps are recorded in [the contribution review](docs/pearai-contributions.md). This is a static snapshot reviewed on 2026-10-22, not a live GitHub feed.
+
 - `whoami` or `about`: name, background, and profile links.
 - `work` or `ls work/`: professional work and open-source contributions.
 - `work healthcare`, `work real-estate`, `work pearai`, `work linux-installer`, `work pathfinding`: read a work note. Public notes include direct MaxFSP repository links.
-- `experience`, `skills`, `contact`, `resume`: corresponding content.
+- `experience`, `skills`, `contact`, `resume`: corresponding content. `skills React`, `skills Python`, and `skills AWS` connect skills to project examples; mapped skills are clickable. Public merged evidence is distinguished from résumé-based professional experience.
 - `ls`, `pwd`, `cd work`, `cd ..`, `cat <filename>`: navigate portfolio files.
 - `theme` or `theme list`: list themes with clickable choices. The header picker also switches themes.
 - `theme dark`, `theme light`, `theme amber`, `theme phosphor`, `theme paper`: apply a theme. Aliases: `black`, `green`, and `retro`.
@@ -56,7 +59,7 @@ The inline prompt uses native text editing beneath a block cursor. Arrow keys re
 
 Edit `src/content.ts` for work notes, profile links, skills, and employment history. The header includes accessible GitHub and LinkedIn logo links at desktop and phone widths. Public work includes PearAI contribution repositories, the Linux installer, and the Python/Pygame A* project. Repository descriptions were checked against their public README or source. Repository links are static, so the portfolio needs no GitHub API or token. Professional client source is private. Public recreations have not been presented as finished or available. Add accurate public repository or demo links when those projects exist.
 
-Replace `public/resume.pdf` when updating your résumé. The command router and layout live in `src/App.tsx`; output rendering is in `src/PortfolioOutput.tsx`. `src/documents.ts` supplies the reader and search from the same localized content. `src/localization.ts` contains the Spanish content. Session state lives in `src/hooks/useSessions.ts`; reader, reference pane, demo, game, tabs, and input are separate components. `src/snake-engine.ts` contains game rules. Appearance lives in `src/styles.css`, theme metadata in `src/themes.ts`, CRT preferences in `src/crt.ts`, and manuals in `src/manual.ts`. IBM Plex Mono and VT323 are bundled locally.
+Replace `public/resume.pdf` when updating your résumé. The command router and layout live in `src/App.tsx`; output rendering is in `src/PortfolioOutput.tsx`. `src/documents.ts` supplies the reader and search from the same localized content. `src/localization.ts` contains the Spanish content. Verified contribution records live in `src/contributions.ts`; skill-to-project mappings in `src/skill-evidence.ts`. Start here uses the same content and contact actions as terminal output. Case studies separate context, contribution, and qualitative result without invented metrics. Session state lives in `src/hooks/useSessions.ts`; reader, reference pane, demo, game, tabs, and input are separate components. `src/snake-engine.ts` contains game rules. Appearance lives in `src/styles.css`, theme metadata in `src/themes.ts`, CRT preferences in `src/crt.ts`, and manuals in `src/manual.ts`. IBM Plex Mono and VT323 are bundled locally.
 
 ## Standalone demo
 

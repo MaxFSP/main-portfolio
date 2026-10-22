@@ -8,6 +8,8 @@ import ReferencePane from './components/ReferencePane';
 import Snake from './components/Snake';
 import SessionTabs from './components/SessionTabs';
 import ProfileLinks from './components/ProfileLinks';
+import StartHere from './components/StartHere';
+import { resolveSkill, skillProjects } from './skill-evidence';
 import { useSessions } from './hooks/useSessions';
 import type { Entry, View } from './hooks/useSessions';
 import { filenames, getDocuments, resolveDocument, tokenize } from './documents';
@@ -24,6 +26,12 @@ const ChunkLab = lazy(() => import('./components/ChunkLab'));
 const commands = ['whoami', 'work', 'experience', 'skills', 'contact', 'help'];
 const completionOptions = [
   ...commands,
+  'start',
+  'tour',
+  'contributions',
+  'contributions merged',
+  'contributions open',
+  ...Object.keys(skillProjects).map((skill) => 'skills ' + skill),
   'about',
   'ls',
   'pwd',
@@ -78,6 +86,7 @@ function initialEntries(): Entry[] {
     experience: 'experience',
     skills: 'skills',
     contact: 'contact',
+    contributions: 'contributions',
   };
   const view = Object.hasOwn(routes, hash) ? routes[hash] : undefined;
   if (view) return [{ id: 0, command: view === 'about' ? 'whoami' : view, path: '~', view }];
@@ -232,6 +241,7 @@ function App() {
           'experience',
           'skills',
           'contact',
+          'contributions',
           ...Object.keys(filenames).map((id) => 'work/' + id),
         ].includes(hash)
       )
@@ -312,7 +322,7 @@ function App() {
       { id, command, path, view, message, project, search },
     ]);
     if (view === 'project' && project) window.history.replaceState(null, '', '#work/' + project);
-    else if (['about', 'work', 'experience', 'skills', 'contact'].includes(view))
+    else if (['about', 'work', 'experience', 'skills', 'contact', 'contributions'].includes(view))
       window.history.replaceState(null, '', '#' + view);
     return id;
   }
@@ -360,6 +370,39 @@ function App() {
     const normalized = command.toLowerCase().replace(/\s+/g, ' ');
     const [name, ...args] = normalized.split(' ');
     const argument = args.join(' ');
+    if (name === 'start' || name === 'tour') {
+      if (argument) {
+        append(command, 'text', 'Usage: start');
+        return;
+      }
+      append(command, 'text');
+      setMode({ type: 'tour', step: 0 });
+      return;
+    }
+    if (name === 'contributions') {
+      if (argument && !['all', 'merged', 'open', 'closed'].includes(argument)) {
+        append(command, 'text', 'Usage: contributions [all|merged|open|closed]');
+        return;
+      }
+      append(command, 'contributions', argument || undefined);
+      return;
+    }
+    if (name === 'skills' && argument) {
+      const selected = resolveSkill(argument);
+      if (!selected) {
+        append(
+          command,
+          'text',
+          t(
+            'No linked examples for that skill. Run skills to see the list.',
+            'No hay ejemplos enlazados para esa habilidad. Ejecuta skills para ver la lista.',
+          ),
+        );
+        return;
+      }
+      append(command, 'skills', selected);
+      return;
+    }
     if (name === 'lang') {
       if (!['en', 'es'].includes(argument)) {
         append(
@@ -869,6 +912,25 @@ function App() {
       ? getDocuments(language).find((item) => item.path === mode.path)
       : undefined;
 
+  function renderOutput(entry: Entry, compactContributions = false) {
+    return (
+      <PortfolioOutput
+        entry={entry}
+        language={language}
+        theme={theme}
+        setTheme={setTheme}
+        crtSettings={crtSettings}
+        setCrtSettings={setCrtSettings}
+        run={run}
+        copyEmail={copyEmail}
+        copied={copied}
+        copyError={copyError}
+        copyProjectLink={copyProjectLink}
+        compactContributions={compactContributions}
+      />
+    );
+  }
+
   return (
     <div className="terminal-app">
       <h1 className="sr-only">
@@ -885,6 +947,9 @@ function App() {
           </span>
         </span>
         <nav className="command-nav" aria-label="Portfolio commands">
+          <button className="start-button" onClick={() => run('start')}>
+            {t('Start here', 'Empieza aquí')}
+          </button>
           {commands.map((command) => (
             <button key={command} onClick={() => run(command)}>
               {command}
@@ -951,6 +1016,15 @@ function App() {
           <Pager document={activeDocument} language={language} onClose={closeMode} />
         ) : mode?.type === 'snake' ? (
           <Snake game={snake} setGame={setSnake} language={language} onClose={closeMode} />
+        ) : mode?.type === 'tour' ? (
+          <StartHere
+            step={mode.step}
+            language={language}
+            setStep={(step) => setMode({ type: 'tour', step })}
+            close={closeMode}
+            run={run}
+            render={(view) => renderOutput({ id: -1, command: '', path, view }, true)}
+          />
         ) : (
           <main
             className="terminal-scroll"
@@ -984,21 +1058,7 @@ function App() {
                     <Prompt path={entry.path} />
                     <span>{entry.command}</span>
                   </div>
-                  <div className="command-output">
-                    <PortfolioOutput
-                      entry={entry}
-                      language={language}
-                      theme={theme}
-                      setTheme={setTheme}
-                      crtSettings={crtSettings}
-                      setCrtSettings={setCrtSettings}
-                      run={run}
-                      copyEmail={copyEmail}
-                      copied={copied}
-                      copyError={copyError}
-                      copyProjectLink={copyProjectLink}
-                    />
-                  </div>
+                  <div className="command-output">{renderOutput(entry)}</div>
                 </section>
               ))}
             </div>
@@ -1110,6 +1170,8 @@ function App() {
             t('j/k scroll / / search / q exit', 'j/k desplaza / / busca / q sale')
           ) : mode?.type === 'snake' ? (
             t('Arrows / Space pause / q exit', 'Flechas / Espacio pausa / q sale')
+          ) : mode?.type === 'tour' ? (
+            t('Select a step / Esc return to terminal', 'Elige un paso / Esc vuelve al terminal')
           ) : (
             <>
               {t('Tab complete / ↑↓ history', 'Tab completa / ↑↓ historial')}{' '}
