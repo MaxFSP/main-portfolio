@@ -1981,3 +1981,36 @@ textarea:focus-visible {
     flex-wrap: wrap;
   }
 }
+
+.project-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 10px;
+  margin: 12px 0 18px;
+}
+.project-action {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  border: 1px solid var(--line);
+  padding: 6px 9px;
+  min-height: 32px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--bg);
+  text-decoration: none;
+}
+.project-action:hover:not(:disabled) {
+  border-color: var(--muted);
+  color: var(--bright);
+  background: var(--hover);
+}
+.project-action:disabled {
+  color: var(--muted);
+  opacity: 0.75;
+}
+.project-action > span {
+  font-size: 10px;
+}

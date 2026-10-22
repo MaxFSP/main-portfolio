@@ -1205,7 +1205,10 @@ test('public work links verified MaxFSP repositories and stays available in file
   await run(page, 'work linux-installer');
   assert.match(await lastOutput(page).innerText(), /Instalador de PearAI para Linux/);
   assert.equal(
-    await lastOutput(page).getByRole('link').getAttribute('href'),
+    await lastOutput(page)
+      .getByRole('group', { name: 'Repositorios del proyecto' })
+      .getByRole('link')
+      .getAttribute('href'),
     'https://github.com/MaxFSP/PearAI-linux-installer',
   );
 });
@@ -1419,4 +1422,71 @@ test('Spanish walkthrough fits phones and short panes, supports keyboard exit, a
     .click();
   await check();
   await page.screenshot({ path: 'test-results/contributions-es.png' });
+});
+
+test('project actions open real case studies and sources while future demos remain clearly marked', async (t) => {
+  const { page } = await openPage(t);
+  await run(page, 'start');
+  const tour = page.getByRole('main', { name: 'Portfolio walkthrough' });
+  await tour.getByRole('button', { name: 'Selected work', exact: true }).click();
+  const healthcare = tour.getByRole('group', {
+    name: 'Project actions / Healthcare audio uploads',
+    exact: true,
+  });
+  assert.ok(
+    await healthcare
+      .getByRole('button', { name: 'View source (private)', exact: true })
+      .isDisabled(),
+  );
+  assert.ok(
+    await healthcare.getByRole('button', { name: 'Try demo (planned)', exact: true }).isDisabled(),
+  );
+  assert.equal(await healthcare.getByRole('link').count(), 0);
+  const pearai = tour.getByRole('group', {
+    name: 'Project actions / PearAI contributions',
+    exact: true,
+  });
+  assert.equal(
+    await pearai
+      .getByRole('link', { name: 'View source / PearAI contributions', exact: true })
+      .getAttribute('href'),
+    'https://github.com/MaxFSP/pearai-app',
+  );
+  await healthcare
+    .getByRole('button', { name: 'Read case study / Healthcare audio uploads', exact: true })
+    .click();
+  const actions = lastOutput(page).getByRole('group', {
+    name: 'Project actions / Healthcare audio uploads',
+    exact: true,
+  });
+  assert.ok(
+    await actions.getByRole('button', { name: 'Try demo (planned)', exact: true }).isDisabled(),
+  );
+  assert.match(await lastOutput(page).innerText(), /Context[\s\S]*My work[\s\S]*Result/);
+});
+
+test('project action labels localize and fit narrow screens with real repository links', async (t) => {
+  const { page } = await openPage(t, { viewport: { width: 320, height: 640 } });
+  await run(page, 'lang es');
+  await run(page, 'work pathfinding');
+  const actions = lastOutput(page).getByRole('group', {
+    name: 'Acciones del proyecto / Búsqueda de rutas A* con interfaz',
+    exact: true,
+  });
+  const source = actions.getByRole('link', { name: /^Ver código/ });
+  assert.equal(
+    await source.getAttribute('href'),
+    'https://github.com/MaxFSP/A-star-pathfinding-with-UI',
+  );
+  assert.equal(await source.getAttribute('target'), '_blank');
+  assert.match(await source.getAttribute('rel'), /noopener/);
+  assert.ok(
+    await actions.getByRole('button', { name: 'Probar demo (prevista)', exact: true }).isDisabled(),
+  );
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  const result = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  assert.deepEqual(result.violations, []);
+  await page.screenshot({ path: 'test-results/project-actions-mobile.png' });
 });

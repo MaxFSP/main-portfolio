@@ -13,6 +13,7 @@ import GrepOutput from './components/GrepOutput';
 import ShareOutput from './components/ShareOutput';
 import ContributionsOutput from './components/ContributionsOutput';
 import SkillsOutput from './components/SkillsOutput';
+import ProjectActions from './components/ProjectActions';
 const resumeUrl = import.meta.env.BASE_URL + 'resume.pdf';
 const ascii = [
   '   _____ ____  ______',
@@ -262,6 +263,7 @@ export default function PortfolioOutput({
           <p className="output-comment">{'# ' + filenames[project.id]}</p>
           <h2>{project.title}</h2>
           <p className="project-organization">{project.organization}</p>
+          <ProjectActions project={project} language={language} run={run} />
           <h3 className="case-heading">{t('Context', 'Contexto')}</h3>
           <p>{project.summary}</p>
           <h3 className="case-heading">{t('My work', 'Mi trabajo')}</h3>

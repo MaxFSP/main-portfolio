@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { getContent, text } from '../localization';
 import type { Language } from '../localization';
 import type { ReactNode } from 'react';
+import ProjectActions from './ProjectActions';
 
 export default function StartHere({
   step,
@@ -84,9 +85,7 @@ export default function StartHere({
                   <h3>{project.title}</h3>
                   <p>{project.description}</p>
                   <p className="output-comment">{project.tags.join(' / ')}</p>
-                  <button className="file-link" onClick={() => run('work ' + id)}>
-                    {t('Read case study', 'Leer caso')} / {project.title}
-                  </button>
+                  <ProjectActions project={project} language={language} run={run} showCaseStudy />
                 </article>
               );
             })}

@@ -5,7 +5,7 @@ export const profile = {
   linkedin: 'https://www.linkedin.com/in/maximiliano-paz-farf%C3%A1n-741b6b21b/',
 };
 
-type Project = {
+export type Project = {
   id: string;
   title: string;
   category: string;
@@ -18,6 +18,8 @@ type Project = {
   note: string;
   outcome?: string;
   repositories?: { label: string; url: string }[];
+  sourceUrl?: string;
+  demoUrl?: string;
 };
 
 export const projects: Project[] = [
