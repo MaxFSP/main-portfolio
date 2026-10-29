@@ -61,6 +61,7 @@ export default function ProjectActions({
         <button
           className="project-action"
           disabled
+          hidden
           title={t(
             'The working demo will be linked here when it is ready.',
             'La demostración se enlazará aquí cuando esté lista.',

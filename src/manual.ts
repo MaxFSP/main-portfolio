@@ -8,7 +8,7 @@ export const manuals: Record<string, Manual> = {
       'Open a four-step introduction: background, selected work, verified contributions, and contact. Use the numbered steps, Back, or Next. Escape returns to the terminal.',
     examples: ['start'],
     notes:
-      'The Start here button opens the same walkthrough. Each shell keeps its own step while open. The tour alias also works. There are no automatic transitions.',
+      'The bare site URL opens this walkthrough by default. Direct content links bypass it. The Start here button opens the same walkthrough. Each shell keeps its own step while open. The tour alias also works. There are no automatic transitions.',
   },
   contributions: {
     synopsis: 'contributions [all|merged|open|closed]',
@@ -200,7 +200,7 @@ const spanish: Record<string, Partial<Manual>> = {
     description:
       'Abre un recorrido de cuatro pasos: perfil, trabajo seleccionado, contribuciones verificadas y contacto. Usa los pasos, Atrás o Siguiente. Escape vuelve al terminal.',
     notes:
-      'Empieza aquí abre el mismo recorrido. Cada sesión conserva su paso mientras está abierto. También funciona tour. No hay avances automáticos.',
+      'La dirección del sitio abre este recorrido por defecto. Los enlaces directos abren su contenido. Empieza aquí abre el mismo recorrido. Cada sesión conserva su paso mientras está abierto. También funciona tour. No hay avances automáticos.',
   },
   contributions: {
     description:

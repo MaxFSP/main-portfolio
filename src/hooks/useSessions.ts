@@ -77,8 +77,10 @@ function makeSession(id: number, entries: Entry[] = [], name?: string): Session 
   };
 }
 
-export function useSessions(initial: () => Entry[]) {
-  const [sessions, setSessions] = useState<Session[]>(() => [makeSession(1, initial())]);
+export function useSessions(initial: () => Entry[], initialMode: () => Mode = () => null) {
+  const [sessions, setSessions] = useState<Session[]>(() => [
+    { ...makeSession(1, initial()), mode: initialMode() },
+  ]);
   const [activeId, setActiveId] = useState(1);
   const nextId = useRef(2);
   const session = sessions.find((item) => item.id === activeId) || sessions[0];

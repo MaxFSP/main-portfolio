@@ -57,11 +57,12 @@ after(async () => {
 });
 
 async function openPage(t, options = {}) {
+  const { entryPath = '/#terminal', ...browserOptions } = options;
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
     colorScheme: 'dark',
     reducedMotion: 'reduce',
-    ...options,
+    ...browserOptions,
   });
   const page = await context.newPage();
   const errors = [];
@@ -70,7 +71,7 @@ async function openPage(t, options = {}) {
     await context.close();
     assert.deepEqual(errors, [], 'No browser runtime errors');
   });
-  await page.goto(url);
+  await page.goto(url + entryPath);
   await page.evaluate(() => document.fonts.ready);
   return { page, context };
 }
@@ -85,8 +86,14 @@ function lastOutput(page) {
   return page.locator('.transcript-entry').last().locator('.command-output');
 }
 
-test('production page is a black monospace terminal with identity and clickable work', async (t) => {
-  const { page } = await openPage(t);
+test('production page opens Start here by default and keeps the black terminal available', async (t) => {
+  const { page } = await openPage(t, { entryPath: '/' });
+  const tour = page.getByRole('main', { name: 'Portfolio walkthrough' });
+  assert.ok(await tour.isVisible());
+  assert.equal(await tour.locator('button[aria-current="step"]').innerText(), '1. Background');
+  await tour.getByRole('button', { name: 'Close walkthrough', exact: true }).click();
+  await page.waitForFunction(() => document.activeElement?.id === 'command-input');
+  assert.equal(new URL(page.url()).hash, '#terminal');
   assert.match(await page.title(), /Santiago Paz Farfán/);
   assert.equal(await page.locator('h1').count(), 1);
   assert.equal(await page.locator('header nav[aria-label="Portfolio commands"]').count(), 1);
@@ -1424,7 +1431,7 @@ test('Spanish walkthrough fits phones and short panes, supports keyboard exit, a
   await page.screenshot({ path: 'test-results/contributions-es.png' });
 });
 
-test('project actions open real case studies and sources while future demos remain clearly marked', async (t) => {
+test('project actions keep working links and retain hidden future-demo buttons', async (t) => {
   const { page } = await openPage(t);
   await run(page, 'start');
   const tour = page.getByRole('main', { name: 'Portfolio walkthrough' });
@@ -1438,9 +1445,9 @@ test('project actions open real case studies and sources while future demos rema
       .getByRole('button', { name: 'View source (private)', exact: true })
       .isDisabled(),
   );
-  assert.ok(
-    await healthcare.getByRole('button', { name: 'Try demo (planned)', exact: true }).isDisabled(),
-  );
+  assert.equal(await healthcare.getByRole('button', { name: /Try demo/ }).count(), 0);
+  assert.equal(await healthcare.locator('button[hidden]').count(), 1);
+  assert.equal(await healthcare.locator('button[hidden]').isVisible(), false);
   assert.equal(await healthcare.getByRole('link').count(), 0);
   const pearai = tour.getByRole('group', {
     name: 'Project actions / PearAI contributions',
@@ -1459,9 +1466,9 @@ test('project actions open real case studies and sources while future demos rema
     name: 'Project actions / Healthcare audio uploads',
     exact: true,
   });
-  assert.ok(
-    await actions.getByRole('button', { name: 'Try demo (planned)', exact: true }).isDisabled(),
-  );
+  assert.equal(await actions.getByRole('button', { name: /Try demo/ }).count(), 0);
+  assert.equal(await actions.locator('button[hidden]').count(), 1);
+  assert.equal(await actions.locator('button[hidden]').isVisible(), false);
   assert.match(await lastOutput(page).innerText(), /Context[\s\S]*My work[\s\S]*Result/);
 });
 
@@ -1480,13 +1487,47 @@ test('project action labels localize and fit narrow screens with real repository
   );
   assert.equal(await source.getAttribute('target'), '_blank');
   assert.match(await source.getAttribute('rel'), /noopener/);
-  assert.ok(
-    await actions.getByRole('button', { name: 'Probar demo (prevista)', exact: true }).isDisabled(),
-  );
+  assert.equal(await actions.getByRole('button', { name: /Probar demo/ }).count(), 0);
+  assert.equal(await actions.locator('button[hidden]').isVisible(), false);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   const result = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .analyze();
   assert.deepEqual(result.violations, []);
   await page.screenshot({ path: 'test-results/project-actions-mobile.png' });
+});
+
+test('fresh visits open the localized walkthrough while direct links and new shells stay usable', async (t) => {
+  const { page } = await openPage(t, { entryPath: '/?lang=es' });
+  const tour = page.getByRole('main', { name: 'Recorrido del portafolio' });
+  assert.ok(await tour.isVisible());
+  assert.equal(await tour.locator('button[aria-current="step"]').innerText(), '1. Perfil');
+  await page.getByRole('button', { name: 'Nueva sesión del terminal' }).click();
+  assert.equal(await tour.count(), 0);
+  assert.ok(await page.getByRole('textbox', { name: 'Comando del terminal' }).isVisible());
+  await page.getByRole('tab', { name: /shell 1/ }).click();
+  assert.ok(await tour.isVisible());
+  await tour.getByRole('button', { name: 'Cerrar recorrido', exact: true }).click();
+  await page.reload();
+  assert.equal(await tour.count(), 0);
+  assert.equal(new URL(page.url()).hash, '#terminal');
+  for (const [hash, expected] of [
+    ['work/healthcare', /Carga de audio/],
+    ['skills', /Habilidades/],
+    ['contact', /maximiliano.farfansp@gmail.com/],
+    ['contributions', /contribuciones verificadas/],
+  ]) {
+    await page.goto(url + '/?lang=es#' + hash);
+    assert.equal(await tour.count(), 0);
+    assert.match(await lastOutput(page).innerText(), expected);
+  }
+  await page.evaluate(() => {
+    location.hash = 'start';
+  });
+  await tour.waitFor();
+  await page.keyboard.press('Control+k');
+  await page.waitForFunction(() => document.activeElement?.id === 'command-input');
+  assert.equal(new URL(page.url()).hash, '#terminal');
+  await page.goto(url + '/?lang=es');
+  assert.ok(await tour.isVisible(), 'The bare domain remains the default walkthrough entry');
 });

@@ -11,7 +11,7 @@ import ProfileLinks from './components/ProfileLinks';
 import StartHere from './components/StartHere';
 import { resolveSkill, skillProjects } from './skill-evidence';
 import { useSessions } from './hooks/useSessions';
-import type { Entry, View } from './hooks/useSessions';
+import type { Entry, Mode, View } from './hooks/useSessions';
 import { filenames, getDocuments, resolveDocument, tokenize } from './documents';
 import type { SearchRequest } from './documents';
 import { getContent, initialLanguage, text } from './localization';
@@ -71,6 +71,12 @@ const completionOptions = [
   'cd ..',
 ];
 const themeKey = 'portfolio-terminal-theme';
+
+function initialMode(): Mode {
+  return !window.location.hash || window.location.hash === '#start'
+    ? { type: 'tour', step: 0 }
+    : null;
+}
 
 function initialEntries(): Entry[] {
   const hash = window.location.hash.slice(1);
@@ -137,7 +143,7 @@ function App() {
     setSplitFile,
     setSplitDemo,
     setSnake,
-  } = useSessions(initialEntries);
+  } = useSessions(initialEntries, initialMode);
   const {
     entries,
     input,
@@ -233,6 +239,14 @@ function App() {
   useEffect(() => {
     function onHashChange() {
       const hash = window.location.hash.slice(1);
+      if (!hash || hash === 'start') {
+        setMode({ type: 'tour', step: 0 });
+        return;
+      }
+      if (hash === 'terminal') {
+        setMode(null);
+        return;
+      }
       if (
         ![
           'about',
@@ -295,6 +309,7 @@ function App() {
     function onKey(event: globalThis.KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
+        if (initialMode()) window.history.replaceState(null, '', '#terminal');
         setMode(null);
         requestAnimationFrame(() => inputRef.current?.focus());
       }
@@ -328,6 +343,7 @@ function App() {
   }
 
   function closeMode() {
+    if (mode?.type === 'tour') window.history.replaceState(null, '', '#terminal');
     setMode(null);
     requestAnimationFrame(() => inputRef.current?.focus());
   }
@@ -354,6 +370,7 @@ function App() {
     setDraft('');
     setCompletions([]);
     setSearching(false);
+    if (mode?.type === 'tour') window.history.replaceState(null, '', '#terminal');
     setMode(null);
     if (!command) {
       append(
@@ -376,6 +393,7 @@ function App() {
         return;
       }
       append(command, 'text');
+      window.history.replaceState(null, '', '#start');
       setMode({ type: 'tour', step: 0 });
       return;
     }

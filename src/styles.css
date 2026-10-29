@@ -2014,3 +2014,6 @@ textarea:focus-visible {
 .project-action > span {
   font-size: 10px;
 }
+.project-action[hidden] {
+  display: none;
+}
